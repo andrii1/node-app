@@ -1,0 +1,7 @@
+{
+  "name": "node-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Andrii Gorokhovskyi <andrii.gorokhovskyi@gmail.com>",
+  "license": "MIT"
+}
