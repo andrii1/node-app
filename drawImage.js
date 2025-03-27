@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 // Register the Norwester font (adjust the path to the font file)
-registerFont("fonts/norwester.otf", { family: "Norwester" });
+registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Define canvas dimensions
 const width = 1000;
@@ -23,14 +23,20 @@ ctx.font = "85px 'Norwester'";
 ctx.textAlign = "center";
 ctx.textBaseline = "middle";
 
+// Convert the text to uppercase
+const text = "Hello from Node.js!".toUpperCase();
+
+// Calculate the vertical position for 20% from the top
+const yPosition = height * 0.2; // 20% from the top
+
 // Draw text in the center
-ctx.fillText("Hello from Node.js!", width / 2, height / 2);
+ctx.fillText(text, width / 2, yPosition);
 
 // Get the Downloads folder path
 const downloadsPath = path.join(
   process.env.HOME || process.env.USERPROFILE,
   "Downloads",
-  "output.png"
+  "output1.png"
 );
 
 // Save the image to the Downloads folder
