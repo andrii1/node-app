@@ -1,6 +1,9 @@
-const { createCanvas } = require("canvas");
+const { createCanvas, registerFont } = require("canvas");
 const fs = require("fs");
 const path = require("path");
+
+// Register the Norwester font (adjust the path to the font file)
+registerFont("fonts/norwester.otf", { family: "Norwester" });
 
 // Define canvas dimensions
 const width = 1000;
@@ -14,16 +17,16 @@ const ctx = canvas.getContext("2d");
 ctx.fillStyle = "#252525";
 ctx.fillRect(0, 0, width, height);
 
-// Set text properties
+// Set text properties using Norwester font and size 85
 ctx.fillStyle = "white";
-ctx.font = "48px Arial";
+ctx.font = "85px 'Norwester'";
 ctx.textAlign = "center";
 ctx.textBaseline = "middle";
 
 // Draw text in the center
 ctx.fillText("Hello from Node.js!", width / 2, height / 2);
 
-// Get the Downloads folder path (works on macOS and Linux)
+// Get the Downloads folder path
 const downloadsPath = path.join(
   process.env.HOME || process.env.USERPROFILE,
   "Downloads",
