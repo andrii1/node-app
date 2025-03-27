@@ -1,37 +1,50 @@
 const { createCanvas, registerFont } = require("canvas");
 const fs = require("fs");
 const path = require("path");
+const { format } = require("date-fns");
+const Papa = require("papaparse");
 
 // Register the Norwester font (adjust the path to the font file)
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Array of quotes
 const quotes = [
-  "The only way to do great work is to love what you do.",
-  "Life is 10% what happens to us and 90% how we react to it.",
-  "Believe you can and you're halfway there.",
-  "Success is not the key to happiness. Happiness is the key to success.",
-  "In the middle of every difficulty lies opportunity."
+  "Every step forward, no matter how small, is a victory on the path to your dreams.",
+  "Embrace challenges as opportunities to unlock your hidden potential.",
+  "The brightest futures are shaped by the boldest actions today.",
+  "Success isn’t about perfection; it’s about persistence in the face of adversity.",
+  "Your journey is unique, and every detour holds a lesson waiting to be discovered.",
 ];
+
+// Base URL and folder for images
+const baseUrl = "https://motivately.co/wp-content/uploads/";
+const defaultDomain = "motivately.co";
+const pinterestBoard = "inspirational-quotes";
 
 // Define canvas dimensions
 const width = 1000;
 const height = 1500;
 const lineHeight = 120; // Set line height to control spacing between lines
 
+function formatFilename(quote) {
+  return quote
+    .replace(/[^\w\s-]/g, "") // Remove punctuation (keep words, spaces, dashes)
+    .replace(/\s+/g, "-"); // Replace spaces with dashes
+}
+
 // Function to wrap text to fit within canvas width
 function wrapText(ctx, text, x, y, maxWidth) {
-  const words = text.split(' ');
-  let line = '';
+  const words = text.split(" ");
+  let line = "";
   let lines = [];
 
   for (let i = 0; i < words.length; i++) {
-    let testLine = line + words[i] + ' ';
+    let testLine = line + words[i] + " ";
     let testWidth = ctx.measureText(testLine).width;
 
     if (testWidth > maxWidth && i > 0) {
       lines.push(line);
-      line = words[i] + ' ';
+      line = words[i] + " ";
     } else {
       line = testLine;
     }
@@ -61,13 +74,20 @@ function getUniqueFolderName(baseFolderPath) {
 }
 
 // Create a new folder for saving all quotes
-const baseFolderPath = path.join(process.env.HOME || process.env.USERPROFILE, 'Downloads', 'quotes_images');
+const baseFolderPath = path.join(
+  process.env.HOME || process.env.USERPROFILE,
+  "Downloads",
+  "quotes_images"
+);
 
 // Get a unique folder path by checking for conflicts
 const imagesFolderPath = getUniqueFolderName(baseFolderPath);
 
 // Create the folder if it doesn't exist
 fs.mkdirSync(imagesFolderPath, { recursive: true });
+
+// Create array to store CSV data
+const csvData = [];
 
 // Loop through each quote and save all in the new folder
 quotes.forEach((quote, index) => {
@@ -89,7 +109,13 @@ quotes.forEach((quote, index) => {
   const text = quote.toUpperCase();
 
   // Wrap the text to fit within the canvas and calculate the number of lines
-  const numberOfLines = wrapText(ctx, text, width / 2, height * 0.2, width * 0.9); // 90% of canvas width
+  const numberOfLines = wrapText(
+    ctx,
+    text,
+    width / 2,
+    height * 0.2,
+    width * 0.9
+  ); // 90% of canvas width
 
   // Calculate the total height of the text block
   const totalTextHeight = numberOfLines * lineHeight;
@@ -112,8 +138,8 @@ quotes.forEach((quote, index) => {
   // Draw the wrapped and centered text
   wrapText(ctx2, text, width / 2, centerY, width * 0.9); // 90% of canvas width
 
-  // Generate a unique filename for each quote
-  const filename = `${quote.substring(0,50)}.png`; // Example: quote_1.png
+  // Generate filename based on the quote (first 50 characters of the quote)
+  const filename = `${quote.substring(0, 60)}.png`; // Example: quote_1.png
 
   // Set the full path where the image will be saved
   const downloadsPath = path.join(imagesFolderPath, filename);
@@ -130,7 +156,40 @@ quotes.forEach((quote, index) => {
 
   // Handle the finish and error events
   out.on("finish", () => {
-    console.log(`Image saved successfully for quote "${quote}" to ${downloadsPath}`);
+    console.log(
+      `Image saved successfully for quote "${quote}" to ${downloadsPath}`
+    );
+
+    // Construct the media URL
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = format(today, "MM");
+    const mediaUrl = `${baseUrl}${year}/${month}/${formatFilename(filename)}.png`;
+
+    // Prepare the CSV entry
+    const row = {
+      Title: quote.substring(0, 100), // Ensure the title is within 100 characters
+      "Media URL": mediaUrl,
+      "Pinterest board": pinterestBoard,
+      Thumbnail: "", // No thumbnail for image quotes
+      Description: "Inspirational quote", // Short description
+      Link: `https://${defaultDomain}`,
+      "Publish date": "", // Set this if necessary
+      Keywords: "inspirational, quotes",
+    };
+
+    // Push the row to the CSV data
+    csvData.push(row);
+
+    // Once all images are saved, generate the CSV
+    if (index === quotes.length - 1) {
+      const csvFilePath = path.join(imagesFolderPath, "quotes.csv");
+      const csv = Papa.unparse(csvData);
+
+      // Write the CSV to the file
+      fs.writeFileSync(csvFilePath, csv);
+      console.log(`CSV file saved to ${csvFilePath}`);
+    }
   });
 
   out.on("error", (err) => {
