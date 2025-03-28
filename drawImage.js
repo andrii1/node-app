@@ -1,11 +1,71 @@
 const { createCanvas, registerFont } = require("canvas");
-const fs = require("fs");
-const path = require("path");
 const { format } = require("date-fns");
 const Papa = require("papaparse");
+// const fetch = require("node-fetch");
+const FormData = require("form-data");
+const fs = require("fs");
+const path = require("path");
+require("dotenv").config();
 
-// Register the Norwester font (adjust the path to the font file)
+// Register the Norwester font
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
+
+// WordPress Credentials (from .env)
+const WP_URL = process.env.WP_URL;
+const WP_URL_POSTS = process.env.WP_URL_POSTS;
+const WP_USERNAME = process.env.WP_USERNAME;
+const WP_APPLICATION_PASSWORD = process.env.WP_APPLICATION_PASSWORD;
+
+const quotes = ["Test", "Test2"];
+const blogUrl ='https://motivately.co/'
+
+function getUniqueFolderName(baseFolderPath) {
+  let folderPath = baseFolderPath;
+  let counter = 1;
+
+  // Check if the folder exists and if so, create a unique name
+  while (fs.existsSync(folderPath)) {
+    folderPath = `${baseFolderPath}(${counter})`;
+    counter++;
+  }
+
+  return folderPath;
+}
+
+// Function to upload image to WordPress
+async function uploadToWordPress(imagePath) {
+  // Read the file as a binary stream and append it to the form
+    const fileBuffer = fs.readFileSync(imagePath);
+
+
+    // Make a POST request to upload the file
+    try {
+      const response = await fetch(`${WP_URL}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(
+            `${WP_USERNAME}:${WP_APPLICATION_PASSWORD}`
+          ).toString("base64")}`,
+          "Content-Disposition": 'attachment; filename="Test.png"',
+          "Content-Type": "image/png",
+        },
+        body: fileBuffer,
+      });
+
+      if (!response.ok) {
+        const errorDetails = await response.text(); // Get the full error response text
+        throw new Error(
+          `Error uploading: ${response.statusText}. Details: ${errorDetails}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("File uploaded successfully:", result);
+      return result;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+    }
+  };
 
 // Function to get the quote and author
 function getQuoteAndAuthor(quote) {
@@ -17,32 +77,12 @@ function getQuoteAndAuthor(quote) {
 }
 
 // Array of quotes
-const quotes = [
-  "Do it with passion or not at all.",
-  "Happy people plan actions, they don’t plan results. – Dennis Waitley",
-  "If it matters to you, you’ll find a way. – Charlie Gilkey",
-  "You don’t have to be perfect.",
-  "The unhappy derive comfort from the misfortunes of others. – Aesop",
-  "Live out of your imagination, not your history. – Stephen Covey",
-];
 
-console.log(quotes.length);
-
-// Base URL and folder for images
-const baseUrl = "https://motivately.co/wp-content/uploads/";
-const defaultDomain = "motivately.co";
-const pinterestBoard = "inspirational-quotes";
 
 // Define canvas dimensions
 const width = 1000;
 const height = 1500;
-const lineHeight = 120; // Set line height to control spacing between lines
-
-function formatFilename(quote) {
-  return quote
-    .replace(/[^\w\s-]/g, "") // Remove punctuation (keep words, spaces, dashes)
-    .replace(/\s+/g, "-"); // Replace spaces with dashes
-}
+const lineHeight = 120;
 
 // Function to wrap text to fit within canvas width
 function wrapText(ctx, text, x, y, maxWidth) {
@@ -61,164 +101,108 @@ function wrapText(ctx, text, x, y, maxWidth) {
       line = testLine;
     }
   }
-  lines.push(line); // Push the last line
+  lines.push(line);
 
-  // Draw each line
   lines.forEach((line, index) => {
     ctx.fillText(line, x, y + index * lineHeight);
   });
 
-  return lines.length; // Return the number of lines drawn
+  return lines.length;
 }
 
-// Function to get a unique folder name
-function getUniqueFolderName(baseFolderPath) {
-  let folderPath = baseFolderPath;
-  let counter = 1;
+// Function to create images
+async function generateImages() {
+  const baseFolderPath = path.join(
+    process.env.HOME || process.env.USERPROFILE,
+    "Downloads",
+    "quotes_images"
+  );
 
-  // Check if the folder exists and if so, create a unique name
-  while (fs.existsSync(folderPath)) {
-    folderPath = `${baseFolderPath}(${counter})`;
-    counter++;
-  }
+  // Get a unique folder path by checking for conflicts
+  const imagesFolderPath = getUniqueFolderName(baseFolderPath);
 
-  return folderPath;
-}
+  // Create the folder if it doesn't exist
+  fs.mkdirSync(imagesFolderPath, { recursive: true });
 
-// Create a new folder for saving all quotes
-const baseFolderPath = path.join(
-  process.env.HOME || process.env.USERPROFILE,
-  "Downloads",
-  "quotes_images"
-);
+  const csvData = [];
+  let count = 0;
 
-// Get a unique folder path by checking for conflicts
-const imagesFolderPath = getUniqueFolderName(baseFolderPath);
+  for (const quote of quotes) {
+    count++;
+    const { text, author } = getQuoteAndAuthor(quote);
 
-// Create the folder if it doesn't exist
-fs.mkdirSync(imagesFolderPath, { recursive: true });
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext("2d");
 
-// Create array to store CSV data
-const csvData = [];
+    ctx.fillStyle = "#252525";
+    ctx.fillRect(0, 0, width, height);
 
-let count = 0;
-// Loop through each quote and save all in the new folder
-quotes.forEach((quote, index) => {
-  count++;
-  // Get the quote text and author using the getQuoteAndAuthor function
-  const { text, author } = getQuoteAndAuthor(quote);
+    ctx.fillStyle = "white";
+    ctx.font = "85px 'Norwester'";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
 
-  // Create a canvas and get the context
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext("2d");
+    const textUpperCase = text.toUpperCase();
+    const numberOfLines = wrapText(ctx, textUpperCase, width / 2, height * 0.2, width * 0.9);
+    const totalTextHeight = numberOfLines * lineHeight;
+    const centerY = (height - totalTextHeight) / 2;
 
-  // Set background color to #252525
-  ctx.fillStyle = "#252525";
-  ctx.fillRect(0, 0, width, height);
+    const canvas2 = createCanvas(width, height);
+    const ctx2 = canvas2.getContext("2d");
 
-  // Set text properties using Norwester font and size 85
-  ctx.fillStyle = "white";
-  ctx.font = "85px 'Norwester'";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top"; // Align from the top of each line
+    ctx2.fillStyle = "#252525";
+    ctx2.fillRect(0, 0, width, height);
+    ctx2.fillStyle = "white";
+    ctx2.font = "85px 'Norwester'";
+    ctx2.textAlign = "center";
+    ctx2.textBaseline = "top";
 
-  // Convert the quote to uppercase
-  const textUpperCase = text.toUpperCase();
+    wrapText(ctx2, textUpperCase, width / 2, centerY, width * 0.9);
 
-  // Wrap the text to fit within the canvas and calculate the number of lines
-  const numberOfLines = wrapText(
-    ctx,
-    textUpperCase,
-    width / 2,
-    height * 0.2,
-    width * 0.9
-  ); // 90% of canvas width
-
-  // Calculate the total height of the text block
-  const totalTextHeight = numberOfLines * lineHeight;
-
-  // Calculate the starting vertical position to center the text
-  const centerY = (height - totalTextHeight) / 2; // Vertically center the text
-
-  // Create the canvas again to use the calculated centerY for positioning
-  const canvas2 = createCanvas(width, height);
-  const ctx2 = canvas2.getContext("2d");
-
-  // Set background color and text properties again for second canvas
-  ctx2.fillStyle = "#252525";
-  ctx2.fillRect(0, 0, width, height);
-  ctx2.fillStyle = "white";
-  ctx2.font = "85px 'Norwester'";
-  ctx2.textAlign = "center";
-  ctx2.textBaseline = "top";
-
-  // Draw the wrapped and centered text
-  wrapText(ctx2, textUpperCase, width / 2, centerY, width * 0.9); // 90% of canvas width
-
-  // If the author is known, draw the author at the bottom
-  if (author !== "Unknown") {
-    ctx2.font = "45px 'Norwester'";
-    ctx2.fillText(`– ${author}`, width / 2, height - 150); // Draw author at the bottom
-  }
-
-  // Generate filename based on the quote (first 50 characters of the quote)
-  const filename = `${text.substring(0, 60)}.png`; // Example: quote_1.png
-  const filenameMedia = `${text.substring(0, 60)}`;
-  // Set the full path where the image will be saved
-  const downloadsPath = path.join(imagesFolderPath, filename);
-
-  // Log where the image will be saved
-  //console.log(`Saving image for quote "${quote}" to:`, downloadsPath);
-
-  // Save the image to the images folder
-  const out = fs.createWriteStream(downloadsPath);
-  const stream = canvas2.createPNGStream();
-
-  // Pipe the stream to the writable file stream
-  stream.pipe(out);
-
-  // Handle the finish and error events
-  out.on("finish", () => {
-    console.log(
-      `Image saved successfully for quote "${quote}" to ${downloadsPath}`
-    );
-
-    // Construct the media URL
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = format(today, "MM");
-    const mediaUrl = `${baseUrl}${year}/${month}/${formatFilename(
-      filenameMedia
-    )}.png`;
-
-    // Prepare the CSV entry
-    const row = {
-      Title: quote.substring(0, 100), // Ensure the title is within 100 characters
-      "Media URL": mediaUrl,
-      "Pinterest board": pinterestBoard,
-      Thumbnail: "", // No thumbnail for image quotes
-      Description: "Inspirational quote", // Short description
-      Link: `https://${defaultDomain}`,
-      "Publish date": "", // Set this if necessary
-      Keywords: "inspirational, quotes",
-    };
-
-    // Push the row to the CSV data
-    csvData.push(row);
-
-    // Once all images are saved, generate the CSV
-    if (count === quotes.length) {
-      const csvFilePath = path.join(imagesFolderPath, "quotes.csv");
-      const csv = Papa.unparse(csvData);
-
-      // Write the CSV to the file
-      fs.writeFileSync(csvFilePath, csv);
-      console.log(`CSV file saved to ${csvFilePath}`);
+    if (author !== "Unknown") {
+      ctx2.font = "45px 'Norwester'";
+      ctx2.fillText(`– ${author}`, width / 2, height - 150);
     }
-    console.log(index, quotes.length);
-  });
 
-  out.on("error", (err) => {
-    console.error("Error saving image:", err);
-  });
-});
+    const filename = `${text.substring(0, 60)}.png`;
+    const imagePath = path.join(imagesFolderPath, filename);
+
+    const out = fs.createWriteStream(imagePath);
+    const stream = canvas2.createPNGStream();
+    stream.pipe(out);
+
+    await new Promise((resolve, reject) => {
+      out.on("finish", resolve);
+      out.on("error", reject);
+    });
+
+    console.log(`Image saved: ${imagePath}`);
+
+    // Upload to WordPress
+    const mediaUrl = await uploadToWordPress(imagePath, filename);
+
+    if (mediaUrl) {
+      const row = {
+        Title: quote.substring(0, 100),
+        "Media URL": mediaUrl.source_url,
+        "Pinterest board": "inspirational-quotes",
+        Thumbnail: "",
+        Description: "Inspirational quote",
+        Link: blogUrl,
+        "Publish date": "",
+        Keywords: "inspirational, quotes",
+      };
+
+      csvData.push(row);
+    }
+  }
+
+  // Save CSV
+  console.log("CSV Data:", csvData);
+  const csvFilePath = path.join(imagesFolderPath, "quotes.csv");
+  const csv = Papa.unparse(csvData);
+  fs.writeFileSync(csvFilePath, csv);
+  console.log(`CSV file saved to ${csvFilePath}`);
+}
+
+generateImages().catch(console.error);
