@@ -7,14 +7,26 @@ const Papa = require("papaparse");
 // Register the Norwester font (adjust the path to the font file)
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
+// Function to get the quote and author
+function getQuoteAndAuthor(quote) {
+  const match = quote.match(/^(.*?)[\s"”]?[–-]\s*([\w\s.]+)$/);
+  if (match) {
+    return { text: match[1].trim(), author: match[2].trim() };
+  }
+  return { text: quote.trim(), author: "Unknown" };
+}
+
 // Array of quotes
 const quotes = [
-  "Every step forward, no matter how small, is a victory on the path to your dreams.",
-  "Embrace challenges as opportunities to unlock your hidden potential.",
-  "The brightest futures are shaped by the boldest actions today.",
-  "Success isn’t about perfection; it’s about persistence in the face of adversity.",
-  "Your journey is unique, and every detour holds a lesson waiting to be discovered.",
+  "Do it with passion or not at all.",
+  "Happy people plan actions, they don’t plan results. – Dennis Waitley",
+  "If it matters to you, you’ll find a way. – Charlie Gilkey",
+  "You don’t have to be perfect.",
+  "The unhappy derive comfort from the misfortunes of others. – Aesop",
+  "Live out of your imagination, not your history. – Stephen Covey",
 ];
+
+console.log(quotes.length);
 
 // Base URL and folder for images
 const baseUrl = "https://motivately.co/wp-content/uploads/";
@@ -89,8 +101,13 @@ fs.mkdirSync(imagesFolderPath, { recursive: true });
 // Create array to store CSV data
 const csvData = [];
 
+let count = 0;
 // Loop through each quote and save all in the new folder
 quotes.forEach((quote, index) => {
+  count++;
+  // Get the quote text and author using the getQuoteAndAuthor function
+  const { text, author } = getQuoteAndAuthor(quote);
+
   // Create a canvas and get the context
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
@@ -106,12 +123,12 @@ quotes.forEach((quote, index) => {
   ctx.textBaseline = "top"; // Align from the top of each line
 
   // Convert the quote to uppercase
-  const text = quote.toUpperCase();
+  const textUpperCase = text.toUpperCase();
 
   // Wrap the text to fit within the canvas and calculate the number of lines
   const numberOfLines = wrapText(
     ctx,
-    text,
+    textUpperCase,
     width / 2,
     height * 0.2,
     width * 0.9
@@ -136,16 +153,22 @@ quotes.forEach((quote, index) => {
   ctx2.textBaseline = "top";
 
   // Draw the wrapped and centered text
-  wrapText(ctx2, text, width / 2, centerY, width * 0.9); // 90% of canvas width
+  wrapText(ctx2, textUpperCase, width / 2, centerY, width * 0.9); // 90% of canvas width
+
+  // If the author is known, draw the author at the bottom
+  if (author !== "Unknown") {
+    ctx2.font = "45px 'Norwester'";
+    ctx2.fillText(`– ${author}`, width / 2, height - 150); // Draw author at the bottom
+  }
 
   // Generate filename based on the quote (first 50 characters of the quote)
-  const filename = `${quote.substring(0, 60)}.png`; // Example: quote_1.png
-
+  const filename = `${text.substring(0, 60)}.png`; // Example: quote_1.png
+  const filenameMedia = `${text.substring(0, 60)}`;
   // Set the full path where the image will be saved
   const downloadsPath = path.join(imagesFolderPath, filename);
 
   // Log where the image will be saved
-  console.log(`Saving image for quote "${quote}" to:`, downloadsPath);
+  //console.log(`Saving image for quote "${quote}" to:`, downloadsPath);
 
   // Save the image to the images folder
   const out = fs.createWriteStream(downloadsPath);
@@ -164,7 +187,9 @@ quotes.forEach((quote, index) => {
     const today = new Date();
     const year = today.getFullYear();
     const month = format(today, "MM");
-    const mediaUrl = `${baseUrl}${year}/${month}/${formatFilename(filename)}.png`;
+    const mediaUrl = `${baseUrl}${year}/${month}/${formatFilename(
+      filenameMedia
+    )}.png`;
 
     // Prepare the CSV entry
     const row = {
@@ -182,7 +207,7 @@ quotes.forEach((quote, index) => {
     csvData.push(row);
 
     // Once all images are saved, generate the CSV
-    if (index === quotes.length - 1) {
+    if (count === quotes.length) {
       const csvFilePath = path.join(imagesFolderPath, "quotes.csv");
       const csv = Papa.unparse(csvData);
 
@@ -190,6 +215,7 @@ quotes.forEach((quote, index) => {
       fs.writeFileSync(csvFilePath, csv);
       console.log(`CSV file saved to ${csvFilePath}`);
     }
+    console.log(index, quotes.length);
   });
 
   out.on("error", (err) => {
