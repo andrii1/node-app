@@ -22,11 +22,31 @@ const auth =
   Buffer.from(`${WP_USERNAME}:${WP_APPLICATION_PASSWORD}`).toString("base64"); // Basic Auth token
 
 const quotes = [
-  "I'm sorry I'm not what you wanted.",
-  "Do what you can",
+  "Weak people revenge. Strong people forgive. Intelligent people ignore.",
+  "I am exhausted from trying to be stronger than I feel.",
+  "You earn your trophies at practice. You just pick them up at competitions.",
+  "Karma never loses an address.",
+  "It just hurts. A lot.",
+  "Strength is what we gain from the madness we survive.",
+  "If you see someone without a smile, give them one of yours. - Dolly Parton",
+  "Good friends are like stars. You don't always see them, but you know they're always there.",
+  "Attitudes are contagious. Make yours worth catching.",
+  "In one lifetime, you will love many times, but one love will burn your soul forever. - Unknown",
+  "I am the type of person that will sit in the bathroom and cry, but then walk out like nothing ever happened.",
+  "Sometimes the two people who are truly best for each other will have to face greater obstacles in order to be with each other.",
+  "Whoever is trying to bring you down is already below you. - Unknown",
+  "I can't even explain how I feel anymore, my thoughts are so messed up in my head that I don't even understand them.",
+  "Sometimes, we have to let go of what's killing us, even if it's killing us to let go. - Unknown",
+  "Die with memories, not dreams.",
+  "I promise to always be by your side. Or under you. Or on top.",
+  "I'm exhausted from trying to be stronger than I feel. - Unknown",
+  "I fell for you unexpectedly, but now I plan to be with you forever.",
+  "Everything you do comes back to you.",
 ];
-const blogUrl = "https://motivately.co/";
-const blogTitle = "Amazing quotes";
+
+const blogTitle = "20 most inspiration quotes ever";
+
+// const blogUrl = "https://motivately.co/";
 
 function getUniqueFolderName(baseFolderPath) {
   let folderPath = baseFolderPath;
@@ -95,6 +115,31 @@ async function uploadToWordPress(imagePath, filename, title) {
     console.error("Error uploading file:", error);
   }
 }
+
+// Define the async function to create a post
+  const createPost = async (postDataParam) => {
+    try {
+      const response = await fetch(WP_URL_POSTS, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: auth, // Authentication header
+        },
+        body: JSON.stringify(postDataParam),
+      });
+
+      // Check if the response is OK (status code 200-299)
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+
+      // Parse the JSON response
+      const data = await response.json();
+      console.log("Post created successfully:", data);
+    } catch (error) {
+      console.error("Error creating post:", error);
+    }
+  };
 
 // Function to get the quote and author
 function getQuoteAndAuthor(quote) {
@@ -234,14 +279,15 @@ async function generateImages() {
       // };
 
 
-      const row = {
-        Link: blogUrl,
-        "Media URL": uploadResult.source_url,
-        Title: quote.substring(0, 100),
-        "Pinterest board": "inspirational-quotes",
-      };
+      // const row = {
+      //   Link: blogUrl,
+      //   "Media URL": uploadResult.source_url,
+      //   Title: quote.substring(0, 100),
+      //   "Pinterest board": "inspirational-quotes",
+      // };
 
-      csvData.push(row);
+      // csvData.push(row);
+
       galleryContent += `
       <!-- wp:image {"id":${uploadResult.id},"sizeSlug":"large","linkDestination":"none"} -->
       <figure class="wp-block-image size-large">
@@ -272,31 +318,7 @@ async function generateImages() {
     status: "publish",
   };
 
-  // Define the async function to create a post
-  const createPost = async () => {
-    try {
-      const response = await fetch(WP_URL_POSTS, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: auth, // Authentication header
-        },
-        body: JSON.stringify(postData),
-      });
-
-      // Check if the response is OK (status code 200-299)
-      if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
-      }
-
-      // Parse the JSON response
-      const data = await response.json();
-      console.log("Post created successfully:", data);
-    } catch (error) {
-      console.error("Error creating post:", error);
-    }
-  };
-  createPost();
+  createPost(postData);
 }
 
 generateImages().catch(console.error);
