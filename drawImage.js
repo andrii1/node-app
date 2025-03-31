@@ -16,8 +16,17 @@ const WP_URL_POSTS = process.env.WP_URL_POSTS;
 const WP_USERNAME = process.env.WP_USERNAME;
 const WP_APPLICATION_PASSWORD = process.env.WP_APPLICATION_PASSWORD;
 
-const quotes = ["Test", "Test2"];
-const blogUrl ='https://motivately.co/'
+
+const auth =
+  "Basic " +
+  Buffer.from(`${WP_USERNAME}:${WP_APPLICATION_PASSWORD}`).toString("base64"); // Basic Auth token
+
+const quotes = [
+  "I'm sorry I'm not what you wanted.",
+  "Do what you can",
+];
+const blogUrl = "https://motivately.co/";
+const blogTitle = "Amazing quotes";
 
 function getUniqueFolderName(baseFolderPath) {
   let folderPath = baseFolderPath;
@@ -32,40 +41,60 @@ function getUniqueFolderName(baseFolderPath) {
   return folderPath;
 }
 
-// Function to upload image to WordPress
-async function uploadToWordPress(imagePath) {
-  // Read the file as a binary stream and append it to the form
-    const fileBuffer = fs.readFileSync(imagePath);
+async function updateMediaTitle(mediaId, title) {
+  try {
+    const response = await fetch(`${WP_URL}/${mediaId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: auth,
+      },
+      body: JSON.stringify({ title: title }),
+    });
 
-
-    // Make a POST request to upload the file
-    try {
-      const response = await fetch(`${WP_URL}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${WP_USERNAME}:${WP_APPLICATION_PASSWORD}`
-          ).toString("base64")}`,
-          "Content-Disposition": 'attachment; filename="Test.png"',
-          "Content-Type": "image/png",
-        },
-        body: fileBuffer,
-      });
-
-      if (!response.ok) {
-        const errorDetails = await response.text(); // Get the full error response text
-        throw new Error(
-          `Error uploading: ${response.statusText}. Details: ${errorDetails}`
-        );
-      }
-
-      const result = await response.json();
-      console.log("File uploaded successfully:", result);
-      return result;
-    } catch (error) {
-      console.error("Error uploading file:", error);
+    if (!response.ok) {
+      throw new Error(`Failed to update media title: ${response.statusText}`);
     }
-  };
+
+    const updatedMedia = await response.json();
+    console.log("Media title updated successfully:", updatedMedia);
+  } catch (error) {
+    console.error("Error updating media title:", error);
+  }
+}
+
+// Function to upload image to WordPress
+async function uploadToWordPress(imagePath, filename, title) {
+  // Read the file as a binary stream and append it to the form
+  const fileBuffer = fs.readFileSync(imagePath);
+
+  // Make a POST request to upload the file
+  try {
+    const response = await fetch(`${WP_URL}`, {
+      method: "POST",
+      headers: {
+        Authorization: auth,
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Type": "image/png",
+      },
+      body: fileBuffer,
+    });
+
+    if (!response.ok) {
+      const errorDetails = await response.text(); // Get the full error response text
+      throw new Error(
+        `Error uploading: ${response.statusText}. Details: ${errorDetails}`
+      );
+    }
+
+    const result = await response.json();
+    console.log("File uploaded successfully:", result);
+    await updateMediaTitle(result.id, title);
+    return result;
+  } catch (error) {
+    console.error("Error uploading file:", error);
+  }
+}
 
 // Function to get the quote and author
 function getQuoteAndAuthor(quote) {
@@ -77,7 +106,6 @@ function getQuoteAndAuthor(quote) {
 }
 
 // Array of quotes
-
 
 // Define canvas dimensions
 const width = 1000;
@@ -126,6 +154,7 @@ async function generateImages() {
 
   const csvData = [];
   let count = 0;
+  let galleryContent = "";
 
   for (const quote of quotes) {
     count++;
@@ -143,7 +172,13 @@ async function generateImages() {
     ctx.textBaseline = "top";
 
     const textUpperCase = text.toUpperCase();
-    const numberOfLines = wrapText(ctx, textUpperCase, width / 2, height * 0.2, width * 0.9);
+    const numberOfLines = wrapText(
+      ctx,
+      textUpperCase,
+      width / 2,
+      height * 0.2,
+      width * 0.9
+    );
     const totalTextHeight = numberOfLines * lineHeight;
     const centerY = (height - totalTextHeight) / 2;
 
@@ -160,8 +195,9 @@ async function generateImages() {
     wrapText(ctx2, textUpperCase, width / 2, centerY, width * 0.9);
 
     if (author !== "Unknown") {
+      const authorUpperCase = author.toUpperCase();
       ctx2.font = "45px 'Norwester'";
-      ctx2.fillText(`– ${author}`, width / 2, height - 150);
+      ctx2.fillText(`– ${authorUpperCase}`, width / 2, height - 150);
     }
 
     const filename = `${text.substring(0, 60)}.png`;
@@ -179,30 +215,88 @@ async function generateImages() {
     console.log(`Image saved: ${imagePath}`);
 
     // Upload to WordPress
-    const mediaUrl = await uploadToWordPress(imagePath, filename);
+    const uploadResult = await uploadToWordPress(
+      imagePath,
+      filename,
+      text.substring(0, 60)
+    );
 
-    if (mediaUrl) {
+    if (uploadResult) {
+      // const row = {
+      //   Title: quote.substring(0, 100),
+      //   "Media URL": uploadResult.source_url,
+      //   "Pinterest board": "inspirational-quotes",
+      //   Thumbnail: "",
+      //   Description: "Inspirational quote",
+      //   Link: blogUrl,
+      //   "Publish date": "",
+      //   Keywords: "inspirational, quotes",
+      // };
+
+
       const row = {
-        Title: quote.substring(0, 100),
-        "Media URL": mediaUrl.source_url,
-        "Pinterest board": "inspirational-quotes",
-        Thumbnail: "",
-        Description: "Inspirational quote",
         Link: blogUrl,
-        "Publish date": "",
-        Keywords: "inspirational, quotes",
+        "Media URL": uploadResult.source_url,
+        Title: quote.substring(0, 100),
+        "Pinterest board": "inspirational-quotes",
       };
 
       csvData.push(row);
+      galleryContent += `
+      <!-- wp:image {"id":${uploadResult.id},"sizeSlug":"large","linkDestination":"none"} -->
+      <figure class="wp-block-image size-large">
+        <img src="${uploadResult.source_url}" alt="" class="wp-image-${uploadResult.id}"/>
+      </figure>
+      <!-- /wp:image -->
+      <p>${quote}</p>
+    `;
+
     }
   }
 
   // Save CSV
-  console.log("CSV Data:", csvData);
-  const csvFilePath = path.join(imagesFolderPath, "quotes.csv");
-  const csv = Papa.unparse(csvData);
-  fs.writeFileSync(csvFilePath, csv);
-  console.log(`CSV file saved to ${csvFilePath}`);
+  // console.log("CSV Data:", csvData);
+  // const csvFilePath = path.join(imagesFolderPath, "quotes.csv");
+  // const csv = Papa.unparse(csvData);
+  // fs.writeFileSync(csvFilePath, csv);
+  // console.log(`CSV file saved to ${csvFilePath}`);
+
+  // Post content
+  let postContent = `<!-- wp:gallery {"linkTo":"none"} -->
+<figure class="wp-block-gallery has-nested-images columns-default is-cropped">${galleryContent}</figure>
+<!-- /wp:gallery -->`;
+
+  const postData = {
+    title: blogTitle,
+    content: postContent,
+    status: "publish",
+  };
+
+  // Define the async function to create a post
+  const createPost = async () => {
+    try {
+      const response = await fetch(WP_URL_POSTS, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: auth, // Authentication header
+        },
+        body: JSON.stringify(postData),
+      });
+
+      // Check if the response is OK (status code 200-299)
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+
+      // Parse the JSON response
+      const data = await response.json();
+      console.log("Post created successfully:", data);
+    } catch (error) {
+      console.error("Error creating post:", error);
+    }
+  };
+  createPost();
 }
 
 generateImages().catch(console.error);
