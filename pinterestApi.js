@@ -1,44 +1,51 @@
 require("dotenv").config();
 const fs = require("fs");
+const path = require("path");
 const request = require("request");
 const PINTEREST_TOKEN = process.env.PINTEREST_ACCESS_TOKEN;
 const pinterest = require("pinterest-node-api")(PINTEREST_TOKEN);
+const { pipeline } = require("stream");
+const { promisify } = require("util");
+
+const streamPipeline = promisify(pipeline);
 
 const getPinterestAnalytics = async () => {
-try {
-  let query = {
-    start_date: '2025-01-01',
-    end_date: '2025-03-01',
-    sort_by: 'IMPRESSION',
-    // from_claimed_content: String(),
-    // pin_format: String(),
-    // app_types: String(),
-    // metric_types: Array(String()),
-    num_of_pins: 50,
-    // created_in_last_n_days: Number(),
-    // ad_account_id: String(),
-  };
-  let response = await pinterest.user_account.getTopPinsAnalytics({ query });
-  console.log(response);
+  try {
+    let query = {
+      start_date: "2025-02-01",
+      end_date: "2025-03-01",
+      sort_by: "ENGAGEMENT",
+      // from_claimed_content: String(),
+      // pin_format: String(),
+      // app_types: String(),
+      // metric_types: Array(String()),
+      num_of_pins: 50,
+      // created_in_last_n_days: Number(),
+      // ad_account_id: String(),
+    };
+    let response = await pinterest.user_account.getTopPinsAnalytics({ query });
+    console.log(response);
+  } catch (error) {
+    return;
+  }
+};
 
-} catch (error) {
-  return;
-}
-}
-
-var pin_id = 1055599906965838;
+var pin_id = "723461127676527443";
 var query = {
   ad_account_id: String(),
 };
-const getPinById = async () => {
-try {
-  var response = await pinterest.pins.get(pin_id);
-  console.log(response);
 
-} catch (error) {
-  return;
-}
-}
+const getPinById = async (pinIdParam) => {
+  try {
+    const response = await pinterest.pins.get(pinIdParam);
+console.log(response.media.images["1200x"].url);
+    return response;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+
 // const postToPinterest = async (payloadParam) => {
 //   try {
 //     const response = await pinterest.pins.create(payloadParam);
@@ -50,7 +57,6 @@ try {
 //     console.error("Error creating post:", error);
 //   }
 // };
-
 
 // let payload = {
 //   link: "https://motivately.co",
@@ -70,11 +76,100 @@ try {
 
 //getPinterestAnalytics();
 
-// var stream = function () {
-//   request(
-//     "https://assets.pinterest.com/ext/embed.html?id=11822017765917991"
-//   ).pipe(fs.createWriteStream("test1.png"));
-// };
-// stream();
+function getUniqueFolderName(baseFolderPath) {
+  let folderPath = baseFolderPath;
+  let counter = 1;
 
-//getPinById();
+  // Check if the folder exists and if so, create a unique name
+  while (fs.existsSync(folderPath)) {
+    folderPath = `${baseFolderPath}(${counter})`;
+    counter++;
+  }
+
+  return folderPath;
+}
+
+const downloadTopPins = async () => {
+  console.log("hello");
+
+  try {
+    const baseFolderPath = path.join(
+      process.env.HOME || process.env.USERPROFILE,
+      "Downloads",
+      "quotes_downloads"
+    );
+
+    //Get a unique folder path by checking for conflicts
+    const imagesFolderPath = getUniqueFolderName(baseFolderPath);
+
+    // Create the folder if it doesn't exist
+    fs.mkdirSync(imagesFolderPath, { recursive: true });
+
+    let query = {
+      start_date: "2025-01-01",
+      end_date: "2025-03-01",
+      sort_by: "IMPRESSION",
+      // from_claimed_content: String(),
+      // pin_format: String(),
+      // app_types: String(),
+      // metric_types: Array(String()),
+      num_of_pins: 3,
+      // created_in_last_n_days: Number(),
+      // ad_account_id: String(),
+    };
+    const response = await pinterest.user_account.getTopPinsAnalytics({
+      query,
+    });
+    console.log(response);
+
+
+
+  } catch (error) {
+    console.error("Error:", error);
+  }
+};
+
+const downloadPins = async (array) => {
+  const baseFolderPath = path.join(
+    process.env.HOME || process.env.USERPROFILE,
+    "Downloads",
+    "quotes_downloads"
+  );
+
+  //Get a unique folder path by checking for conflicts
+  const imagesFolderPath = getUniqueFolderName(baseFolderPath);
+
+  // Create the folder if it doesn't exist
+  fs.mkdirSync(imagesFolderPath, { recursive: true });
+  for (const pin of array) {
+      const pinData = await getPinById(pin);
+      console.log(pinData);
+
+      const imageUrl = pinData.media.images["1200x"].url;
+      const filename = `${pin}.png`;
+      const imagePath = path.join(imagesFolderPath, filename);
+
+      await downloadImage(imageUrl, imagePath);
+    }
+}
+
+const downloadImage = async (url, filepath) => {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok)
+      throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+
+    const fileStream = fs.createWriteStream(filepath);
+
+    // Use stream pipeline for proper stream handling
+    await streamPipeline(response.body, fileStream);
+    console.log(`Downloaded: ${filepath}`);
+  } catch (error) {
+    console.error(`Error downloading image: ${error.message}`);
+    throw error;
+  }
+};
+
+//downloadPins(pinIds);
+getPinterestAnalytics();
