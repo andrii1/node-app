@@ -12,6 +12,16 @@ const AWS = require("aws-sdk");
 
 const turndownService = new TurndownService();
 
+turndownService.addRule("divWithClass", {
+  filter: "div",
+  replacement: function (content, node) {
+    const className = node.getAttribute("class");
+    return className
+      ? `<div class="${className}">${content}</div>\n`
+      : `<div>${content}</div>\n`;
+  },
+});
+
 // Register the Norwester font
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
@@ -282,9 +292,19 @@ async function generateImages() {
 
       // csvData.push(row);
 
-      galleryContent += `
-      <p>${quote}</p>
-    `;
+      imagesContent += `
+  <div>
+    <a href="../quotes/${quote.id}" target="_blank">
+      <img
+        src="${uploadResult.Location}"
+        alt="${quote.title}"
+        class="image-single-blog"
+      />
+    </a>
+    <p>${quote.title}</p>
+  </div>
+`;
+
     }
   }
 
@@ -299,7 +319,9 @@ async function generateImages() {
   //   let postContent = `<!-- wp:gallery {"linkTo":"none"} -->
   // <figure class="wp-block-gallery has-nested-images columns-default is-cropped">${galleryContent}</figure>
   // <!-- /wp:gallery -->`;
-  let postContentHTML = `<article>${galleryContent}</article>`;
+
+
+  const postContentHTML = `<div class="images-blog-container">${imagesContent}</div>`;
   const postContent = turndownService.turndown(postContentHTML);
 
   const postData = {
