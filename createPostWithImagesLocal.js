@@ -36,7 +36,11 @@ AWS.config.update({
   region: process.env.AWS_REGION,
 });
 
-const quotes = ["tessadsad. – Steve Jobs", "test112418 – Winston Churchill"];
+const quotes = [
+  "The best way to predict the future is to create it. – Abraham Lincoln",
+  "Success usually comes to those who are too busy to be looking for it. – Henry David Thoreau",
+  "Don’t watch the clock; do what it does. Keep going. – Sam Levenson",
+];
 
 const blogTitle = "3 Naomi Osaka quotes - best collection";
 
@@ -91,7 +95,7 @@ async function updateQuote(quoteId, quoteObj) {
     console.error(`Failed to update quote (${res.status}):`, errorBody);
     throw new Error(`Failed to update quote: ${res.statusText}`);
   }
-
+  console.log("Updated quote:", quoteObj);
   return await res.json();
 }
 
@@ -118,7 +122,10 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
     existingQuotes.map((q) => [q.title.toLowerCase().trim(), q.id])
   );
   const authorMap = new Map(
-    existingAuthors.map((a) => [a.fullName.toLowerCase().trim(), a.id])
+    existingAuthors.map((a) => [
+      a.fullName.toLowerCase().trim(),
+      { id: a.id, fullName: a.fullName },
+    ])
   );
 
   const insertedQuotes = [];
@@ -134,13 +141,21 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
 
     // Get or insert author
     let authorId;
-    const normalizedAuthor = author.toLowerCase();
+    let authorFullName;
+    const normalizedAuthor = author.toLowerCase().trim();
+
     if (authorMap.has(normalizedAuthor)) {
-      authorId = authorMap.get(normalizedAuthor);
+      const authorData = authorMap.get(normalizedAuthor);
+      authorId = authorData.id;
+      authorFullName = authorData.fullName;
     } else {
       const newAuthor = await insertAuthor(author);
       authorId = newAuthor.id;
-      authorMap.set(normalizedAuthor, authorId);
+      authorFullName = newAuthor.authorFullName;
+      authorMap.set(normalizedAuthor, {
+        id: authorId,
+        fullName: authorFullName,
+      });
     }
 
     // New quote
@@ -151,9 +166,12 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
       user_id: "1",
     });
     console.log("Inserted quote:", newQuote);
-    insertedQuotes.push({ id: newQuote.quoteId, title: text });
+    insertedQuotes.push({
+      id: newQuote.quoteId,
+      title: text,
+      author: authorFullName,
+    });
   }
-console.log(insertedQuotes);
 
   return insertedQuotes;
 };
@@ -271,9 +289,9 @@ async function generateImages() {
 
   for (const quote of updatedQuotes) {
     count++;
-    const { text, author } = getQuoteAndAuthor(quote.title);
- console.log("quote id", quote.id);
-
+    const text = quote.title;
+    const author = quote.author;
+    console.log("quote id", quote.id);
 
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
@@ -356,14 +374,14 @@ async function generateImages() {
 
       imagesContent += `
   <div>
-    <a href="../quotes/${quote.id}" target="_blank">
+   <Link to="../quotes/${quote.id}" target="_blank">
       <img
         src="${uploadResult.Location}"
-        alt="${quote.title}"
+        alt="${text} -${author}"
         class="image-single-blog"
       />
-    </a>
-    <p>${quote.title}</p>
+   </Link>
+    <p>"${text}" -${author}</p>
   </div>
 `;
     }
@@ -391,7 +409,7 @@ async function generateImages() {
     user_id: "1",
   };
 
-  //createPost(postData);
+  createPost(postData);
 }
 
 generateImages().catch(console.error);
