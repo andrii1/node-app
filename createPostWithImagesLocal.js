@@ -9,6 +9,7 @@ require("dotenv").config();
 const { apiURL } = require("./utils/apiURL");
 const TurndownService = require("turndown");
 const AWS = require("aws-sdk");
+const { v4: uuidv4 } = require("uuid");
 
 const turndownService = new TurndownService();
 
@@ -25,11 +26,7 @@ turndownService.addRule("divWithClass", {
 // Register the Norwester font
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
-// WordPress Credentials (from .env)
-const WP_URL = process.env.WP_URL;
-const WP_URL_POSTS = process.env.WP_URL_POSTS;
-const WP_USERNAME = process.env.WP_USERNAME;
-const WP_APPLICATION_PASSWORD = process.env.WP_APPLICATION_PASSWORD;
+// Credentials (from .env)
 const USER_UID = process.env.USER_UID;
 const LOCALHOST_API_PATH = process.env.LOCALHOST_API_PATH;
 
@@ -39,31 +36,66 @@ AWS.config.update({
   region: process.env.AWS_REGION,
 });
 
-const auth =
-  "Basic " +
-  Buffer.from(`${WP_USERNAME}:${WP_APPLICATION_PASSWORD}`).toString("base64"); // Basic Auth token
-
-const quotes = [
-  {
-    id: 1,
-    title:
-      "You just gotta keep going and fighting for everything, and one day you'll get to where you want. - Naomi Osaka",
-  },
-  {
-    id: 2,
-    title:
-      "Success is not just about making money. It's about making a difference.",
-  },
-  {
-    id: 3,
-    title:
-      "The only way to do something in depth is to work hard. It's that simple.",
-  },
-];
+const quotes = ["tessadsad. – Steve Jobs", "test112418 – Winston Churchill"];
 
 const blogTitle = "3 Naomi Osaka quotes - best collection";
 
 // const blogUrl = "https://motivately.co/";
+
+// fetch helpers
+async function fetchExistingQuotes() {
+  const res = await fetch(`${LOCALHOST_API_PATH}/quotes`);
+  return res.json();
+}
+
+async function fetchExistingAuthors() {
+  const res = await fetch(`${LOCALHOST_API_PATH}/authors`);
+  return res.json();
+}
+
+async function insertAuthor(name) {
+  const res = await fetch(`${LOCALHOST_API_PATH}/authors`, {
+    method: "POST",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ full_name: name }),
+  });
+  return await res.json(); // assume it returns { id, full_name }
+}
+
+async function insertQuote(quoteObj) {
+  const res = await fetch(`${LOCALHOST_API_PATH}/quotes`, {
+    method: "POST",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(quoteObj),
+  });
+  return await res.json(); // assume it returns { id, title }
+}
+
+async function updateQuote(quoteId, quoteObj) {
+  const res = await fetch(`${LOCALHOST_API_PATH}/quotes/${quoteId}`, {
+    method: "PATCH",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(quoteObj),
+  });
+  if (!res.ok) {
+    const errorBody = await res.text(); // <- read text, not json
+    console.error(`Failed to update quote (${res.status}):`, errorBody);
+    throw new Error(`Failed to update quote: ${res.statusText}`);
+  }
+
+  return await res.json();
+}
+
+////// fs helpers
 
 function getUniqueFolderName(baseFolderPath) {
   let folderPath = baseFolderPath;
@@ -78,27 +110,53 @@ function getUniqueFolderName(baseFolderPath) {
   return folderPath;
 }
 
-async function updateMediaTitle(mediaId, title) {
-  try {
-    const response = await fetch(`${WP_URL}/${mediaId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: auth,
-      },
-      body: JSON.stringify({ title: title }),
-    });
+const dedupeQuotesAndAuthors = async (quotesParam) => {
+  const existingQuotes = await fetchExistingQuotes();
+  const existingAuthors = await fetchExistingAuthors();
 
-    if (!response.ok) {
-      throw new Error(`Failed to update media title: ${response.statusText}`);
+  const quoteMap = new Map(
+    existingQuotes.map((q) => [q.title.toLowerCase().trim(), q.id])
+  );
+  const authorMap = new Map(
+    existingAuthors.map((a) => [a.fullName.toLowerCase().trim(), a.id])
+  );
+
+  const insertedQuotes = [];
+
+  for (const quote of quotesParam) {
+    const { text, author } = getQuoteAndAuthor(quote);
+
+    // Skip if quote exists
+    if (quoteMap.has(text.toLowerCase())) {
+      console.log("Duplicate quote skipped:", text);
+      continue;
     }
 
-    const updatedMedia = await response.json();
-    console.log("Media title updated successfully:", updatedMedia);
-  } catch (error) {
-    console.error("Error updating media title:", error);
+    // Get or insert author
+    let authorId;
+    const normalizedAuthor = author.toLowerCase();
+    if (authorMap.has(normalizedAuthor)) {
+      authorId = authorMap.get(normalizedAuthor);
+    } else {
+      const newAuthor = await insertAuthor(author);
+      authorId = newAuthor.id;
+      authorMap.set(normalizedAuthor, authorId);
+    }
+
+    // New quote
+    console.log("Inserting quote:", text);
+    const newQuote = await insertQuote({
+      title: text,
+      author_id: authorId,
+      user_id: "1",
+    });
+    console.log("Inserted quote:", newQuote);
+    insertedQuotes.push({ id: newQuote.quoteId, title: text });
   }
-}
+console.log(insertedQuotes);
+
+  return insertedQuotes;
+};
 
 // Function to upload image to S3
 // Upload to AWS S3
@@ -106,13 +164,12 @@ async function uploadToS3(imagePath, filename) {
   const fileContent = fs.readFileSync(imagePath);
   const s3 = new AWS.S3();
 
- const params = {
-   Bucket: process.env.AWS_S3_BUCKET_NAME,
-   Key: `quotes/${filename}`,
-   Body: fileContent,
-   ContentType: "image/png",
- };
-
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: `quotes/${filename}`,
+    Body: fileContent,
+    ContentType: "image/png",
+  };
 
   try {
     const data = await s3.upload(params).promise();
@@ -208,11 +265,15 @@ async function generateImages() {
 
   const csvData = [];
   let count = 0;
-  let galleryContent = "";
+  let imagesContent = "";
 
-  for (const quote of quotes) {
+  const updatedQuotes = await dedupeQuotesAndAuthors(quotes);
+
+  for (const quote of updatedQuotes) {
     count++;
     const { text, author } = getQuoteAndAuthor(quote.title);
+ console.log("quote id", quote.id);
+
 
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
@@ -254,7 +315,7 @@ async function generateImages() {
       ctx2.fillText(`– ${authorUpperCase}`, width / 2, height - 150);
     }
 
-    const filename = `${quote.id}.png`;
+    const filename = `${uuidv4()}.png`;
     const imagePath = path.join(imagesFolderPath, filename);
 
     const out = fs.createWriteStream(imagePath);
@@ -291,6 +352,7 @@ async function generateImages() {
       // // };
 
       // csvData.push(row);
+      await updateQuote(quote.id, { image_url: uploadResult.Location });
 
       imagesContent += `
   <div>
@@ -304,7 +366,6 @@ async function generateImages() {
     <p>${quote.title}</p>
   </div>
 `;
-
     }
   }
 
@@ -319,7 +380,6 @@ async function generateImages() {
   //   let postContent = `<!-- wp:gallery {"linkTo":"none"} -->
   // <figure class="wp-block-gallery has-nested-images columns-default is-cropped">${galleryContent}</figure>
   // <!-- /wp:gallery -->`;
-
 
   const postContentHTML = `<div class="images-blog-container">${imagesContent}</div>`;
   const postContent = turndownService.turndown(postContentHTML);
