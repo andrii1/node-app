@@ -37,12 +37,13 @@ AWS.config.update({
 });
 
 const quotes = [
-  "The best way to predict the future is to create it. – Abraham Lincoln",
-  "Success usually comes to those who are too busy to be looking for it. – Henry David Thoreau",
-  "Don’t watch the clock; do what it does. Keep going. – Sam Levenson",
+  "You are never too old to set another goal ew dream. – C.S. Lewis",
+  "The only limit to our r tomorrow is our doubts of today. – Franklin D. Roosevelt",
+  "It always seems ’s done. – Nelson Mandela",
 ];
 
-const blogTitle = "3 Naomi Osaka quotes - best collection";
+
+const blogTitle = "3 inspirational quotes - best collection";
 
 // const blogUrl = "https://motivately.co/";
 
@@ -374,14 +375,14 @@ async function generateImages() {
 
       imagesContent += `
   <div>
-   <Link to="../quotes/${quote.id}" target="_blank">
+   <a href="../quotes/${quote.id}" target="_blank">
       <img
         src="${uploadResult.Location}"
-        alt="${text} -${author}"
+        alt="${text} - ${author}"
         class="image-single-blog"
       />
-   </Link>
-    <p>"${text}" -${author}</p>
+   </a>
+    <p>"${text}" - ${author}</p>
   </div>
 `;
     }
