@@ -28,9 +28,10 @@ registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID;
-const LOCALHOST_API_PATH = process.env.LOCALHOST_API_PATH;
+// const LOCALHOST_API_PATH = process.env.LOCALHOST_API_PATH;
+const PROD_API_PATH = process.env.PROD_API_PATH;
 
-const blog3 = {
+const blog = {
   title: "Barney fife quotes",
   content: `“Sheriff Andy Taylor: Now, you can’t be serious about resignin’. What in the world will you do?
 
@@ -82,7 +83,7 @@ Barney Fife: Right…life is different.”
 };
 
 
-const blog2 = {
+const blog3 = {
   title: "Naomi Osaka Opening Minds to Mental Health Issues Of Pro Athletes",
   content: `When tennis star Naomi Osaka announced prior to the French Open that she’d be declining to participate in all required media sessions during the tournament due to the stress and anxiety it caused her, the move was initially met with mixed messages. Some, including tournament officials, took the point of view that the Japanese-American Osaka was shirking her responsibility as a professional athlete. Her media sessions were viewed as a way for her to connect with the tennis public that ultimately pays her salary. French Open officials even vowed to fine Osaka for each media appearance since missed.
 
@@ -127,7 +128,7 @@ Osaka believes that sporting organizations need to recognize that there are athl
 ​​“There can be moments for any of us where we are dealing with issues behind the scenes,” Osaka said. “Each of us as humans is going through something on some level.”`,
 };
 
-const blog = {
+const blog2 = {
   title: "You didn't love her grey's anatomy",
   content: `
 “You didn't love her! You just didn't want to be alone. Or maybe, maybe she was good for your ego. Or, or maybe she made you feel better about your miserable life, but you didn't love her, because you don't destroy the person that you love!”
@@ -193,7 +194,7 @@ function convertContentToMarkdown(content) {
 
 const createPost = async (postDataParam) => {
   try {
-    const response = await fetch(`${LOCALHOST_API_PATH}/blogs`, {
+    const response = await fetch(`${PROD_API_PATH}/blogs`, {
       method: "POST",
       headers: {
         token: `token ${USER_UID}`,
