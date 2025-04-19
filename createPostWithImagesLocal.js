@@ -42,7 +42,6 @@ const quotes = [
   "It always seems ’s done. – Nelson Mandela",
 ];
 
-
 const blogTitle = "3 inspirational quotes - best collection";
 
 // const blogUrl = "https://motivately.co/";
@@ -372,17 +371,22 @@ async function generateImages() {
 
       // csvData.push(row);
       await updateQuote(quote.id, { image_url: uploadResult.Location });
-
+      let quoteInBlog;
+      if (author !== "Unknown") {
+        quoteInBlog = `"${text}" - ${author}`;
+      } else {
+        quoteInBlog = `"${text}"`;
+      }
       imagesContent += `
   <div>
    <a href="../quotes/${quote.id}" target="_blank">
       <img
         src="${uploadResult.Location}"
-        alt="${text} - ${author}"
+        alt="${quoteInBlog}"
         class="image-single-blog"
       />
    </a>
-    <p>"${text}" - ${author}</p>
+    <p>${quoteInBlog}</p>
   </div>
 `;
     }

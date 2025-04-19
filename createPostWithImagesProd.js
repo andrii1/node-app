@@ -45,33 +45,34 @@ const quotesExample = [
 const blogTitleExample = "3 inspirational quotes - best collection";
 
 const quotes = [
-  "Sometimes you just gotta stay silent, cause no words can explain the shit that's going on in your mind and heart.",
-  "I don't have the energy to pretend to like you today.",
-  "When the heart gets too heavy with pain, people don't cry—they become silent. Completely silent.",
-  "Sometimes it's easier to pretend that you don't care, than to admit it's killing you.",
-  "Yeah, she's smiling. But don't let that fool you. Look into her eyes—she's breaking inside.",
-  "The worst distance between two people is misunderstanding.",
-  "I don't need perfect people in my life. I just need honest, good-hearted ones.",
-  "I'm proud of my heart. It's been played, stabbed, cheated, burned, and broken—but somehow still works.",
-  "You look sad today... Yeah, I'm sad every day, I just didn't have the energy to hide it today. – Donna Waag",
-  "There comes a point where you no longer care if there's a light at the end of the tunnel or not. You're just sick of the tunnel. – Ranata Suzuki",
-  "The worst kind of sad is not being able to explain why.",
-  "If you focus on the hurt, you will continue to suffer. If you focus on the lesson, you will continue to grow.",
-  "Some say I'm too sensitive, but truth is I just feel too much. Every word, every action, every energy goes straight to my heart.",
-  "I don't hold grudges. I remember facts.",
-  "If you know me you know that: 1) I hate liars 2) I'm loyal 3) I'm honest 4) I'm weird 5) I hate being ignored 6) I text back fast.",
-  "I think the saddest people always try their hardest to make people happy because they know what it's like to feel absolutely worthless and they don't want anyone else to feel like that. – Robin Williams",
-  "If you hate me, hate me alone. Don't be out there lying about me trying to recruit people to hate me with you.",
-  "You see a person's true colors when you are no longer beneficial to their life. – Unknown",
-  "Today my forest is dark. The trees are sad and all the butterflies have broken wings. – Raine Cooper",
-  "I felt so much, that I started to feel nothing.",
-  "Be silly. Be fun. Be different. Be crazy. Be you, because life is too short to be anything but happy.",
-  "My stomach drops when I think of anyone else having you.",
-  "Don't think people understand how stressful it is to explain what's going on in your head when you don't even understand it yourself.",
-  "You'll never know how damaged someone is until you try to love them.",
+  "Don't let anyone who hasn't been in your shoes tell you how to tie your laces.",
+  "We met for a reason. Either you're a blessing or a lesson.",
+  "Be careful who you trust, the devil was once an angel. – Unknown",
+  "I forgive people. It doesn’t mean I accept their behavior or trust them. It means I forgive them for me, so I can let go and move on with my life.",
+  "I don't trust easily. So when I tell you that I trust you, please don’t make me regret it.",
+  "Single isn't a status. It's a word that describes a person who is strong enough to enjoy life without depending on the wrong people.",
+  "Have you ever been so sad that it physically hurts inside?",
+  "We used to talk for hours. Look at us now.",
+  "Emotionally: I'm done. Mentally: I'm drained. Spiritually: I'm dead. Physically: I smile.",
+  "A tongue has no bones but it can break a heart.",
+  "Some days it takes a lot of work just to be okay.",
+  "Avoid people who mess with your head. People who upset you. People who won't prioritize you. You don’t need them. Avoid them.",
+  "Some days I wish I could go back in life. Not to change anything, but to feel a few things twice.",
+  "Missing you comes in waves. Tonight, I'm drowning.",
+  "Don't trust everything you see. Even salt looks like sugar.",
+  "Yes, I took it personal. Because I would've never done the same to you.",
+  "I just wish I could lose these feelings as fast as I lost you.",
+  "I know I have friends, but I feel like I have no one to talk to about the shit that goes on in my head.",
+  "Breathe and remember who the fuck you are.",
+  "The hardest journey: strangers → best friends → strangers.",
+  "The girl who laughs and talks a lot and seems very happy, is also the girl who may cry herself to sleep.",
+  "Don't tell me I've changed, when in reality, I just stopped dealing with you.",
+  "It can only break you if you let it.",
+  "Knew it was too good to be true.",
+  "The person who tries to keep everyone happy often ends up feeling the loneliest.",
 ];
 
-const blogTitle = "SO TRUE QUOTES - ultimate list";
+const blogTitle = "so true quotes list";
 
 // const blogUrl = "https://motivately.co/";
 
@@ -400,17 +401,22 @@ async function generateImages() {
 
       // csvData.push(row);
       await updateQuote(quote.id, { image_url: uploadResult.Location });
-
+      let quoteInBlog;
+      if (author !== "Unknown") {
+        quoteInBlog = `"${text}" - ${author}`;
+      } else {
+        quoteInBlog = `"${text}"`;
+      }
       imagesContent += `
   <div>
    <a href="../quotes/${quote.id}" target="_blank">
       <img
         src="${uploadResult.Location}"
-        alt="${text} - ${author}"
+        alt="${quoteInBlog}"
         class="image-single-blog"
       />
    </a>
-    <p>"${text}" - ${author}</p>
+    <p>${quoteInBlog}</p>
   </div>
 `;
     }
