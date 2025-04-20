@@ -13,6 +13,21 @@ const { v4: uuidv4 } = require("uuid");
 
 const turndownService = new TurndownService();
 
+// Rule 1: Preserve <FavoritesBar quoteid="3" /> as JSX
+turndownService.addRule("favoritesBarComponent", {
+  filter: function (node) {
+    return (
+      node.nodeType === 1 &&
+      node.tagName === "FAVORITESBAR"
+    );
+  },
+  replacement: function (content, node) {
+    const quoteId = node.getAttribute("quoteid");
+    return `<FavoritesBar quoteId={${quoteId}} />`;
+  },
+});
+
+// Rule 2: Preserve divs with their class
 turndownService.addRule("divWithClass", {
   filter: "div",
   replacement: function (content, node) {
@@ -23,12 +38,20 @@ turndownService.addRule("divWithClass", {
   },
 });
 
+// Rule 3: Preserve p tags
+turndownService.addRule("preserveParagraphs", {
+  filter: "p",
+  replacement: function (content) {
+    return `<p>${content}</p>`;
+  },
+});
+
 // Register the Norwester font
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID;
-const PROD_API_PATH = process.env.PROD_API_PATH;
+const API_PATH = process.env.LOCALHOST_API_PATH;
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -45,50 +68,26 @@ const quotesExample = [
 const blogTitleExample = "3 inspirational quotes - best collection";
 
 const quotes = [
-  "Don't let anyone who hasn't been in your shoes tell you how to tie your laces.",
-  "We met for a reason. Either you're a blessing or a lesson.",
-  "Be careful who you trust, the devil was once an angel. – Unknown",
-  "I forgive people. It doesn’t mean I accept their behavior or trust them. It means I forgive them for me, so I can let go and move on with my life.",
-  "I don't trust easily. So when I tell you that I trust you, please don’t make me regret it.",
-  "Single isn't a status. It's a word that describes a person who is strong enough to enjoy life without depending on the wrong people.",
-  "Have you ever been so sad that it physically hurts inside?",
-  "We used to talk for hours. Look at us now.",
-  "Emotionally: I'm done. Mentally: I'm drained. Spiritually: I'm dead. Physically: I smile.",
-  "A tongue has no bones but it can break a heart.",
-  "Some days it takes a lot of work just to be okay.",
-  "Avoid people who mess with your head. People who upset you. People who won't prioritize you. You don’t need them. Avoid them.",
-  "Some days I wish I could go back in life. Not to change anything, but to feel a few things twice.",
-  "Missing you comes in waves. Tonight, I'm drowning.",
-  "Don't trust everything you see. Even salt looks like sugar.",
-  "Yes, I took it personal. Because I would've never done the same to you.",
-  "I just wish I could lose these feelings as fast as I lost you.",
-  "I know I have friends, but I feel like I have no one to talk to about the shit that goes on in my head.",
-  "Breathe and remember who the fuck you are.",
-  "The hardest journey: strangers → best friends → strangers.",
-  "The girl who laughs and talks a lot and seems very happy, is also the girl who may cry herself to sleep.",
-  "Don't tell me I've changed, when in reality, I just stopped dealing with you.",
-  "It can only break you if you let it.",
-  "Knew it was too good to be true.",
-  "The person who tries to keep everyone happy often ends up feeling the loneliest.",
+  "Studying is a good thing ok ok ok.",
 ];
 
-const blogTitle = "so true quotes list";
+const blogTitle = "123";
 
 // const blogUrl = "https://motivately.co/";
 
 // fetch helpers
 async function fetchExistingQuotes() {
-  const res = await fetch(`${PROD_API_PATH}/quotes`);
+  const res = await fetch(`${API_PATH}/quotes`);
   return res.json();
 }
 
 async function fetchExistingAuthors() {
-  const res = await fetch(`${PROD_API_PATH}/authors`);
+  const res = await fetch(`${API_PATH}/authors`);
   return res.json();
 }
 
 async function insertAuthor(name) {
-  const res = await fetch(`${PROD_API_PATH}/authors`, {
+  const res = await fetch(`${API_PATH}/authors`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
@@ -100,7 +99,7 @@ async function insertAuthor(name) {
 }
 
 async function insertQuote(quoteObj) {
-  const res = await fetch(`${PROD_API_PATH}/quotes`, {
+  const res = await fetch(`${API_PATH}/quotes`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
@@ -112,7 +111,7 @@ async function insertQuote(quoteObj) {
 }
 
 async function updateQuote(quoteId, quoteObj) {
-  const res = await fetch(`${PROD_API_PATH}/quotes/${quoteId}`, {
+  const res = await fetch(`${API_PATH}/quotes/${quoteId}`, {
     method: "PATCH",
     headers: {
       token: `token ${USER_UID}`,
@@ -233,7 +232,7 @@ async function uploadToS3(imagePath, filename) {
 
 const createPost = async (postDataParam) => {
   try {
-    const response = await fetch(`${PROD_API_PATH}/blogs`, {
+    const response = await fetch(`${API_PATH}/blogs`, {
       method: "POST",
       headers: {
         token: `token ${USER_UID}`,
@@ -407,6 +406,8 @@ async function generateImages() {
       } else {
         quoteInBlog = `"${text}"`;
       }
+      console.log(quoteInBlog);
+
       imagesContent += `
   <div>
    <a href="../quotes/${quote.id}" target="_blank">
@@ -416,7 +417,8 @@ async function generateImages() {
         class="image-single-blog"
       />
    </a>
-    <p>${quoteInBlog}</p>
+   <FavoritesBar quoteid="${quote.id}" />
+   <p>${quoteInBlog}</p>
   </div>
 `;
     }
@@ -436,6 +438,7 @@ async function generateImages() {
 
   const postContentHTML = `<div class="images-blog-container">${imagesContent}</div>`;
   const postContent = turndownService.turndown(postContentHTML);
+  console.log("Markdown output:", postContent);
 
   const postData = {
     title: blogTitle,
