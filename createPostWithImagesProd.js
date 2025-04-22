@@ -11,47 +11,47 @@ const TurndownService = require("turndown");
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 
-const turndownService = new TurndownService();
+// const turndownService = new TurndownService();
 
-// Rule 1: Preserve <FavoritesBar quoteid="3" /> as JSX
-turndownService.addRule("favoritesBarComponent", {
-  filter: function (node) {
-    return (
-      node.nodeType === 1 &&
-      node.tagName === "FAVORITESBAR"
-    );
-  },
-  replacement: function (content, node) {
-    const quoteId = node.getAttribute("quoteid");
-    return `<FavoritesBar quoteId={${quoteId}} />`;
-  },
-});
+// // Rule 1: Preserve <FavoritesBar quoteid="3" /> as JSX
+// turndownService.addRule("favoritesBarComponent", {
+//   filter: function (node) {
+//     return (
+//       node.nodeType === 1 &&
+//       node.tagName === "FAVORITESBAR"
+//     );
+//   },
+//   replacement: function (content, node) {
+//     const quoteId = node.getAttribute("quoteid");
+//     return `<FavoritesBar quoteId={${quoteId}} />`;
+//   },
+// });
 
-// Rule 2: Preserve divs with their class
-turndownService.addRule("divWithClass", {
-  filter: "div",
-  replacement: function (content, node) {
-    const className = node.getAttribute("class");
-    return className
-      ? `<div class="${className}">${content}</div>\n`
-      : `<div>${content}</div>\n`;
-  },
-});
+// // Rule 2: Preserve divs with their class
+// turndownService.addRule("divWithClass", {
+//   filter: "div",
+//   replacement: function (content, node) {
+//     const className = node.getAttribute("class");
+//     return className
+//       ? `<div class="${className}">${content}</div>\n`
+//       : `<div>${content}</div>\n`;
+//   },
+// });
 
-// Rule 3: Preserve p tags
-turndownService.addRule("preserveParagraphs", {
-  filter: "p",
-  replacement: function (content) {
-    return `<p>${content}</p>`;
-  },
-});
+// // Rule 3: Preserve p tags
+// turndownService.addRule("preserveParagraphs", {
+//   filter: "p",
+//   replacement: function (content) {
+//     return `<p>${content}</p>`;
+//   },
+// });
 
 // Register the Norwester font
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID;
-const API_PATH = process.env.LOCALHOST_API_PATH;
+const API_PATH = process.env.LOCAL_API_PATH;
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -67,11 +67,11 @@ const quotesExample = [
 
 const blogTitleExample = "3 inspirational quotes - best collection";
 
-const quotes = [
-  "Studying is a good thing ok ok ok.",
-];
+const quotes = ["We mesdf "];
 
-const blogTitle = "123";
+const blogTitle = "8 thoughtful quotes";
+
+const tag = "gdg";
 
 // const blogUrl = "https://motivately.co/";
 
@@ -83,6 +83,11 @@ async function fetchExistingQuotes() {
 
 async function fetchExistingAuthors() {
   const res = await fetch(`${API_PATH}/authors`);
+  return res.json();
+}
+
+async function fetchExistingTags() {
+  const res = await fetch(`${API_PATH}/tags`);
   return res.json();
 }
 
@@ -100,6 +105,30 @@ async function insertAuthor(name) {
 
 async function insertQuote(quoteObj) {
   const res = await fetch(`${API_PATH}/quotes`, {
+    method: "POST",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(quoteObj),
+  });
+  return await res.json(); // assume it returns { id, title }
+}
+
+async function insertTag(title) {
+  const res = await fetch(`${API_PATH}/tags`, {
+    method: "POST",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ title }),
+  });
+  return await res.json(); // assume it returns { id, full_name }
+}
+
+async function insertQuoteToTag(quoteObj, tag) {
+  const res = await fetch(`${API_PATH}/quotes?tag=${tag}`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
@@ -146,6 +175,7 @@ function getUniqueFolderName(baseFolderPath) {
 const dedupeQuotesAndAuthors = async (quotesParam) => {
   const existingQuotes = await fetchExistingQuotes();
   const existingAuthors = await fetchExistingAuthors();
+  const existingTags = await fetchExistingTags();
 
   const quoteMap = new Map(
     existingQuotes.map((q) => [q.title.toLowerCase().trim(), q.id])
@@ -154,6 +184,13 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
     existingAuthors.map((a) => [
       a.fullName.toLowerCase().trim(),
       { id: a.id, fullName: a.fullName },
+    ])
+  );
+
+  const tagMap = new Map(
+    existingTags.map((a) => [
+      a.title.toLowerCase().trim(),
+      { id: a.id, title: a.title },
     ])
   );
 
@@ -187,6 +224,25 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
       });
     }
 
+    // Get or insert tag
+    let tagId;
+    let tagTitle;
+    const normalizedTag = tag.toLowerCase().trim();
+
+    if (tagMap.has(normalizedTag)) {
+      const tagData = tagMap.get(normalizedTag);
+      tagId = tagData.id;
+      tagTitle = tagData.title;
+    } else {
+      const newTag = await insertTag(tag);
+      tagId = newTag.tagId;
+      tagTitle = newTag.tagTitle;
+      tagMap.set(normalizedTag, {
+        id: tagId,
+        title: tagTitle,
+      });
+    }
+
     // New quote
     console.log("Inserting quote:", text);
     const newQuote = await insertQuote({
@@ -194,7 +250,23 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
       author_id: authorId,
       user_id: "1",
     });
+
+    // Skip if quote exists
+    if (newQuote.existing) {
+      console.log("Duplicate quote skipped:", text);
+      continue;
+    }
     console.log("Inserted quote:", newQuote);
+
+    const newQuoteToTag = await insertQuoteToTag(
+      {
+        quote_id: newQuote.quoteId,
+      },
+      tagId
+    );
+
+    console.log("Inserted quoteToTag:", newQuoteToTag);
+
     insertedQuotes.push({
       id: newQuote.quoteId,
       title: text,
@@ -400,6 +472,7 @@ async function generateImages() {
 
       // csvData.push(row);
       await updateQuote(quote.id, { image_url: uploadResult.Location });
+
       let quoteInBlog;
       if (author !== "Unknown") {
         quoteInBlog = `"${text}" - ${author}`;
@@ -408,19 +481,23 @@ async function generateImages() {
       }
       console.log(quoteInBlog);
 
+      //       imagesContent += `
+      //   <div>
+      //    <a href="../quotes/${quote.id}" target="_blank">
+      //       <img
+      //         src="${uploadResult.Location}"
+      //         alt="${quoteInBlog}"
+      //         class="image-single-blog"
+      //       />
+      //    </a>
+      //    <FavoritesBar quoteid="${quote.id}" />
+      //    <p>${quoteInBlog}</p>
+      //   </div>
+      // `;
       imagesContent += `
   <div>
-   <a href="../quotes/${quote.id}" target="_blank">
-      <img
-        src="${uploadResult.Location}"
-        alt="${quoteInBlog}"
-        class="image-single-blog"
-      />
-   </a>
-   <FavoritesBar quoteid="${quote.id}" />
-   <p>${quoteInBlog}</p>
-  </div>
-`;
+    [![${quoteInBlog}](${uploadResult.Location})](../quotes/${quote.id})<FavoritesBar quoteId={${quote.id}} /><p>${quoteInBlog}</p>
+  </div>`;
     }
   }
 
@@ -436,18 +513,20 @@ async function generateImages() {
   // <figure class="wp-block-gallery has-nested-images columns-default is-cropped">${galleryContent}</figure>
   // <!-- /wp:gallery -->`;
 
-  const postContentHTML = `<div class="images-blog-container">${imagesContent}</div>`;
-  const postContent = turndownService.turndown(postContentHTML);
-  console.log("Markdown output:", postContent);
+  if (updatedQuotes.length > 0) {
+    const postContent = `<div class="images-blog-container">${imagesContent}</div>`;
+    // const postContent = turndownService.turndown(postContentHTML);
+    console.log("Markdown output:", postContent);
 
-  const postData = {
-    title: blogTitle,
-    content: postContent,
-    status: "published",
-    user_id: "1",
-  };
+    const postData = {
+      title: blogTitle,
+      content: postContent,
+      status: "published",
+      user_id: "1",
+    };
 
-  createPost(postData);
+    createPost(postData);
+  }
 }
 
 generateImages().catch(console.error);
