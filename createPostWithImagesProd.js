@@ -51,7 +51,7 @@ registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID;
-const API_PATH = process.env.LOCAL_API_PATH;
+const API_PATH = process.env.PROD_API_PATH;
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -67,11 +67,23 @@ const quotesExample = [
 
 const blogTitleExample = "3 inspirational quotes - best collection";
 
-const quotes = ["We mesdf "];
+const quotes = [
+  "Can we start over? Can we be strangers again? Let me introduce myself. We can laugh and talk and relearn what we already know and come up with new inside jokes and create new memories and give each other a second chance. – e.l.",
+  "I remember when you meant nothing to me. I wasn't aware of your existence, but now you're the reason I have these awful bags under my eyes; I stay up till 4AM thinking about you. It's bizarre how a person could mean nothing to you but in a matter of hours, days, weeks, or months, they could mean the world to you—even if they make your heart drown in a sea of regret and leave a hurricane of bittersweet memories behind. – A.E.",
+  "I wish we could go back in time. To before it all went wrong. When we were pointlessly flirting, and joking around. Before I fell for you. Before we broke each other's hearts.",
+  "Some nights I wish I could go back in life. Not to change shit, just to feel a couple things twice. – Drake, 6PM In New York",
+  "Looking back at our old chats, holding back tears.",
+  "I wish we could go back to how we used to be. I miss that.",
+  "Everything was simple.",
+  "Let's go somewhere and never come back.",
+  "I really wish I could turn back time and take back the hurt I have inflicted on you. And show you how much you mean to me. And how I do truly love you.",
+  "If I could turn back time, I would do it—just to see you again. – ST",
+];
 
-const blogTitle = "8 thoughtful quotes";
 
-const tag = "gdg";
+const blogTitle = "I wish i could go back to those days quotes";
+
+const tag = "nostalgia";
 
 // const blogUrl = "https://motivately.co/";
 
@@ -216,7 +228,7 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
       authorFullName = authorData.fullName;
     } else {
       const newAuthor = await insertAuthor(author);
-      authorId = newAuthor.id;
+      authorId = newAuthor.authorId;
       authorFullName = newAuthor.authorFullName;
       authorMap.set(normalizedAuthor, {
         id: authorId,
@@ -227,20 +239,22 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
     // Get or insert tag
     let tagId;
     let tagTitle;
-    const normalizedTag = tag.toLowerCase().trim();
+    if (tag) {
+      const normalizedTag = tag.toLowerCase().trim();
 
-    if (tagMap.has(normalizedTag)) {
-      const tagData = tagMap.get(normalizedTag);
-      tagId = tagData.id;
-      tagTitle = tagData.title;
-    } else {
-      const newTag = await insertTag(tag);
-      tagId = newTag.tagId;
-      tagTitle = newTag.tagTitle;
-      tagMap.set(normalizedTag, {
-        id: tagId,
-        title: tagTitle,
-      });
+      if (tagMap.has(normalizedTag)) {
+        const tagData = tagMap.get(normalizedTag);
+        tagId = tagData.id;
+        tagTitle = tagData.title;
+      } else {
+        const newTag = await insertTag(tag);
+        tagId = newTag.tagId;
+        tagTitle = newTag.tagTitle;
+        tagMap.set(normalizedTag, {
+          id: tagId,
+          title: tagTitle,
+        });
+      }
     }
 
     // New quote
@@ -258,14 +272,15 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
     }
     console.log("Inserted quote:", newQuote);
 
-    const newQuoteToTag = await insertQuoteToTag(
-      {
-        quote_id: newQuote.quoteId,
-      },
-      tagId
-    );
-
-    console.log("Inserted quoteToTag:", newQuoteToTag);
+    if (tag) {
+      const newQuoteToTag = await insertQuoteToTag(
+        {
+          quote_id: newQuote.quoteId,
+        },
+        tagId
+      );
+      console.log("Inserted quoteToTag:", newQuoteToTag);
+    }
 
     insertedQuotes.push({
       id: newQuote.quoteId,
