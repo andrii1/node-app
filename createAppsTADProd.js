@@ -50,8 +50,8 @@ const { v4: uuidv4 } = require("uuid");
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Credentials (from .env)
-const USER_UID = process.env.USER_UID;
-const API_PATH = process.env.PROD_API_PATH;
+const USER_UID = process.env.USER_UID_DEALS;
+const PROD_API_PATH = process.env.PROD_API_PATH_DEALS;
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -79,9 +79,6 @@ const quotes = [
   "Change everything but yourself. - Naomi Osaka",
 ];
 
-
-
-
 const blogTitle = "Naomi Osaka quotes";
 
 // const tag = "nostalgia";
@@ -89,29 +86,70 @@ const blogTitle = "Naomi Osaka quotes";
 // const blogUrl = "https://motivately.co/";
 
 // fetch helpers
-async function fetchExistingQuotes() {
-  const res = await fetch(`${API_PATH}/quotes`);
+async function fetchExistingCategories() {
+  const res = await fetch(`${API_PATH}/categories`);
   return res.json();
 }
 
-async function fetchExistingAuthors() {
-  const res = await fetch(`${API_PATH}/authors`);
+async function fetchExistingTopics() {
+  const res = await fetch(`${API_PATH}/topics`);
   return res.json();
 }
 
-async function fetchExistingTags() {
-  const res = await fetch(`${API_PATH}/tags`);
+async function fetchExistingApps() {
+  const res = await fetch(`${API_PATH}/apps`);
   return res.json();
 }
 
-async function insertAuthor(name) {
-  const res = await fetch(`${API_PATH}/authors`, {
+async function fetchExistingDeals() {
+  const res = await fetch(`${API_PATH}/deals`);
+  return res.json();
+}
+
+async function insertCategory(title) {
+  const res = await fetch(`${API_PATH}/categories`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ full_name: name }),
+    body: JSON.stringify({ title }),
+  });
+  return await res.json(); // assume it returns { id, full_name }
+}
+
+async function insertTopic(title, categoryId) {
+  const res = await fetch(`${API_PATH}/topics`, {
+    method: "POST",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ title, category_id: categoryId }),
+  });
+  return await res.json(); // assume it returns { id, full_name }
+}
+
+async function insertApp(title, apple_id, description, topicId) {
+  const res = await fetch(`${API_PATH}/apps/node`, {
+    method: "POST",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ title, apple_id, description, topic_id: topicId }),
+  });
+  return await res.json(); // assume it returns { id, full_name }
+}
+
+async function insertDeal(title, appAppleId) {
+  const res = await fetch(`${API_PATH}/deals/node`, {
+    method: "POST",
+    headers: {
+      token: `token ${USER_UID}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ title, appAppleId }),
   });
   return await res.json(); // assume it returns { id, full_name }
 }
@@ -185,7 +223,7 @@ function getUniqueFolderName(baseFolderPath) {
   return folderPath;
 }
 
-const dedupeQuotesAndAuthors = async (quotesParam) => {
+const dedupeApps = async (appsParam) => {
   const existingQuotes = await fetchExistingQuotes();
   const existingAuthors = await fetchExistingAuthors();
   // const existingTags = await fetchExistingTags();
@@ -193,6 +231,7 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
   const quoteMap = new Map(
     existingQuotes.map((q) => [q.title.toLowerCase().trim(), q.id])
   );
+
   const authorMap = new Map(
     existingAuthors.map((a) => [
       a.fullName.toLowerCase().trim(),
@@ -207,20 +246,15 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
   //   ])
   // );
 
-  const insertedQuotes = [];
+  const insertedApps = [];
 
-  for (const quote of quotesParam) {
+  for (const app of appsParam) {
     const { text, author } = getQuoteAndAuthor(quote);
     const wordCount = text.trim().split(/\s+/).length;
 
     // Skip if quote exists
     if (quoteMap.has(text.toLowerCase())) {
-      console.log("Duplicate quote skipped:", text);
-      continue;
-    }
-
-    if (wordCount > 38) {
-      console.log("Too big quote skipped:", text);
+      console.log("Duplicate app skipped:", text);
       continue;
     }
 
@@ -243,26 +277,17 @@ const dedupeQuotesAndAuthors = async (quotesParam) => {
       });
     }
 
-    // Get or insert tag
-    // let tagId;
-    // let tagTitle;
-    // if (tag) {
-    //   const normalizedTag = tag.toLowerCase().trim();
+    const newCategory = await insertCategory(category);
+    const categoryId = newCategory.categoryId;
 
-    //   if (tagMap.has(normalizedTag)) {
-    //     const tagData = tagMap.get(normalizedTag);
-    //     tagId = tagData.id;
-    //     tagTitle = tagData.title;
-    //   } else {
-    //     const newTag = await insertTag(tag);
-    //     tagId = newTag.tagId;
-    //     tagTitle = newTag.tagTitle;
-    //     tagMap.set(normalizedTag, {
-    //       id: tagId,
-    //       title: tagTitle,
-    //     });
-    //   }
-    // }
+    const newTopic = await insertTopic(topic, categoryId);
+    const topicId = newTopic.topicId;
+
+    const newApp = await insertApp(app, apple_id, description, topicId);
+    const newAppleId = newApp.apple_id;
+
+    const newDeal = await insertDeal(deal, newAppleId);
+    const appDeal = newDeal.dealId;
 
     // New quote
     console.log("Inserting quote:", text);
