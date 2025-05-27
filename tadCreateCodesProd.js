@@ -10,6 +10,11 @@ const { apiURL } = require("./utils/apiURL");
 const TurndownService = require("turndown");
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
+const OpenAI = require("openai");
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
+});
 
 // const turndownService = new TurndownService();
 
@@ -47,7 +52,7 @@ const { v4: uuidv4 } = require("uuid");
 // });
 
 // Credentials (from .env)
-const USER_UID = process.env.USER_UID_DEALS;
+const USER_UID = process.env.USER_UID_DEALS_LOCAL;
 const API_PATH = process.env.LOCAL_API_PATH;
 
 AWS.config.update({
@@ -56,11 +61,18 @@ AWS.config.update({
   region: process.env.AWS_REGION,
 });
 
+// const codes = [
+//   {
+//     code: "ieydypd",
+//     appleId: "6502968192",
+//     dealDescription: "Description of the deal",
+//   },
+// ];
+
 const codes = [
   {
-    code: "abcdef",
-    appleId: "123456789",
-    dealDescription: "Description of the deal",
+    code: "3SKU73",
+    appleId: "1578068536",
   },
 ];
 
@@ -75,7 +87,7 @@ async function fetchAppByAppleId(appleId) {
 
 async function createTopicWithChatGpt(category, app, appDescription) {
   // Generate a short description using OpenAI
-  const prompt = `Generate a subcategory (or a topic) for this app: ${app}, which is in this Apple App Store category: ${category}, which has this app description: ${appDescription}`;
+  const prompt = `Generate a subcategory (or a topic) for this app: ${app}, which is in this Apple App Store category: ${category}, which has this app description: ${appDescription}. It should be 1 or 2 or 3 words maximum. Ideally 1 or 2 words.`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -108,14 +120,14 @@ async function createTopicWithChatGpt(category, app, appDescription) {
 //   return res.json();
 // }
 
-async function insertCategory(title) {
+async function insertCategory(title, categoryAppleId) {
   const res = await fetch(`${API_PATH}/categories`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, category_apple_id: categoryAppleId }),
   });
   return await res.json(); // assume it returns { id, full_name }
 }
@@ -144,14 +156,19 @@ async function insertApp(title, apple_id, topicId) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-async function insertDeal(title, description, appId) {
+async function insertDeal(title, description, appleId, appId) {
   const res = await fetch(`${API_PATH}/deals/node`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ title, description, app_id: appId }),
+    body: JSON.stringify({
+      title,
+      description,
+      apple_id: appleId,
+      app_id: appId,
+    }),
   });
   return await res.json(); // assume it returns { id, full_name }
 }
@@ -180,7 +197,7 @@ const insertCodes = async (codesParam) => {
     const appTitle = app.trackName;
     const appDescription = app.description;
 
-    const newCategory = await insertCategory(category);
+    const newCategory = await insertCategory(category, categoryAppleId);
     const categoryId = newCategory.categoryId;
     console.log("Inserted category:", newCategory);
 
@@ -189,6 +206,7 @@ const insertCodes = async (codesParam) => {
       appTitle,
       appDescription
     );
+    console.log("createdTopic", createdTopic);
 
     const newTopic = await insertTopic(createdTopic, categoryId);
     const topicId = newTopic.topicId;
@@ -196,9 +214,12 @@ const insertCodes = async (codesParam) => {
 
     const newApp = await insertApp(appTitle, appleId, topicId);
     const appId = newApp.appId;
+    const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
 
-    const newDeal = await insertDeal(deal, dealDescription, appId);
+    const deal = `${newAppTitle} referral codes`;
+
+    const newDeal = await insertDeal(deal, dealDescription, appleId, appId);
     const dealId = newDeal.dealId;
     console.log("Inserted deal:", newDeal);
 
