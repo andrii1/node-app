@@ -5,6 +5,7 @@
   "author": "Andrii Gorokhovskyi <andrii.gorokhovskyi@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "app-store-scraper": "^0.18.0",
     "aws-sdk": "^2.1692.0",
     "canvas": "^3.1.0",
     "date-fns": "^4.1.0",

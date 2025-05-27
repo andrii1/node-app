@@ -11,6 +11,7 @@ const TurndownService = require("turndown");
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
+const store = require("app-store-scraper");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
@@ -187,7 +188,7 @@ async function insertDeal(title, appleId, appId) {
 const insertApps = async (appsParam) => {
 
   for (const appItem of appsParam) {
-    const { appleId } = appItem;
+    const appleId = appItem.id;
 
     const app = await fetchAppByAppleId(appleId);
     const category = app.primaryGenreName;
@@ -229,4 +230,12 @@ const insertApps = async (appsParam) => {
 };
 
 
-insertApps(apps).catch(console.error);
+//insertApps(apps).catch(console.error);
+
+store
+  .list({
+    collection: store.collection.TOP_FREE_IOS,
+    num: 2,
+  })
+  .then(insertApps)
+  .catch(console.log);
