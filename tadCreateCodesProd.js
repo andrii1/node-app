@@ -71,12 +71,26 @@ AWS.config.update({
 
 const codes = [
   {
-    code: "3Ssdg3asdg",
-    url: "https://example.com",
+    code: "0dfgdfg",
+    appUrl: "https://instawork.com",
   },
 ];
 
+// const codes = [
+//   {
+//     code: "087sfg",
+//     appleId: "098213409",
+//   },
+// ];
+
 // fetch helpers
+
+async function fetchExistingTopics() {
+  const res = await fetch(`${API_PATH}/topics`);
+  const data = await res.json();
+  const topics = data.map((topic) => topic.title);
+  return topics;
+}
 
 async function fetchAppByAppleId(appleId) {
   const url = `https://itunes.apple.com/lookup?id=${appleId}`;
@@ -86,8 +100,11 @@ async function fetchAppByAppleId(appleId) {
 }
 
 async function createTopicWithChatGpt(category, app, appDescription) {
+  const existingTopics = await fetchExistingTopics();
+  console.log("existingTopics", existingTopics);
+
   // Generate a short description using OpenAI
-  const prompt = `Generate a subcategory (or a topic) for this app: ${app}, which is in this Apple App Store category: ${category}, which has this app description: ${appDescription}. It should be 1 or 2 or 3 words maximum. Ideally 1 or 2 words.`;
+  const prompt = `Select a topic for this app ${app} from list of existing topics: "${existingTopics}". Return only topic name, without any additional text, e.g. "Video". This is preferred. But, if none of the topics is suitable, than generate a subcategory (or a topic) for this app: ${app}, which is in this Apple App Store category: ${category}, which has this app description: ${appDescription}. It should be 1 or 2 or 3 words maximum. Ideally 1 or 2 words.`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -98,6 +115,42 @@ async function createTopicWithChatGpt(category, app, appDescription) {
 
   const topic = completion.choices[0].message.content.trim();
   return topic;
+}
+
+async function createWebsiteDataWithChatGpt(url) {
+  // Generate a short description using OpenAI
+  const prompt = `Select a category for this website: ${url}. You need to select one category from this list: "Books, Business, Catalogs, Education, Entertainment, Finance, Food and Drink, Games, Health and Fitness, Lifestyle, Medical, Music, Navigation, News, Photo and Video, Productivity, Reference, Shopping, Social Networking, Sports, Travel, Utilities, Weather". Return only category name, without any additional text, e.g. "Education."`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.7,
+    max_tokens: 300,
+  });
+
+  const promptTitle = `Get app title based on its website: ${url}. Return only app title, without any additional text, e.g. "Duolingo"`;
+
+  const completionTitle = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: promptTitle }],
+    temperature: 0.7,
+    max_tokens: 300,
+  });
+
+  const promptDescription = `Create app description based on its website: ${url}.`;
+
+  const completionDescription = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: promptDescription }],
+    temperature: 0.7,
+    max_tokens: 300,
+  });
+
+  const category = completion.choices[0].message.content.trim();
+  const appTitle = completionTitle.choices[0].message.content.trim();
+  const appDescription =
+    completionDescription.choices[0].message.content.trim();
+  return { category, appTitle, appDescription };
 }
 
 // async function fetchExistingCategories() {
@@ -158,8 +211,6 @@ async function insertApp({ appTitle, appleId, appUrl, topicId }) {
     body.url = appUrl;
   }
 
-  console.log(body);
-
   const res = await fetch(`${API_PATH}/apps/node`, {
     method: "POST",
     headers: {
@@ -171,7 +222,7 @@ async function insertApp({ appTitle, appleId, appUrl, topicId }) {
   return await res.json();
 }
 
-async function insertDeal(title, description, appleId, appId) {
+async function insertDeal({ deal, dealDescription, appleId, appUrl, appId }) {
   const res = await fetch(`${API_PATH}/deals/node`, {
     method: "POST",
     headers: {
@@ -179,9 +230,10 @@ async function insertDeal(title, description, appleId, appId) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      title,
-      description,
+      title: deal,
+      description: dealDescription,
       apple_id: appleId,
+      url: appUrl,
       app_id: appId,
     }),
   });
@@ -211,10 +263,13 @@ const insertCodes = async (codesParam) => {
 
     if (appleId) {
       app = await fetchAppByAppleId(appleId);
-     category = app.primaryGenreName;
+      category = app.primaryGenreName;
       categoryAppleId = app.primaryGenreId;
       appTitle = app.trackName;
       appDescription = app.description;
+    } else {
+      ({ category, appTitle, appDescription } =
+        await createWebsiteDataWithChatGpt(appUrl));
     }
 
     const newCategory = await insertCategory(category, categoryAppleId);
@@ -226,7 +281,6 @@ const insertCodes = async (codesParam) => {
       appTitle,
       appDescription
     );
-    console.log("createdTopic", createdTopic);
 
     const newTopic = await insertTopic(createdTopic, categoryId);
     const topicId = newTopic.topicId;
@@ -239,7 +293,13 @@ const insertCodes = async (codesParam) => {
 
     const deal = `${newAppTitle} referral codes`;
 
-    const newDeal = await insertDeal(deal, dealDescription, appleId, appId);
+    const newDeal = await insertDeal({
+      deal,
+      dealDescription,
+      appleId,
+      appUrl,
+      appId,
+    });
     const dealId = newDeal.dealId;
     console.log("Inserted deal:", newDeal);
 
