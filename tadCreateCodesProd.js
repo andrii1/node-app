@@ -11,6 +11,7 @@ const TurndownService = require("turndown");
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
+const formatReddit = require("./tadRedditScraper");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
@@ -69,12 +70,12 @@ AWS.config.update({
 //   },
 // ];
 
-const codes = [
-  {
-    code: "0dfgdfg",
-    appUrl: "https://instawork.com",
-  },
-];
+// const codes = [
+//   {
+//     code: "0dfgdfg",
+//     appUrl: "https://instawork.com",
+//   },
+// ];
 
 // const codes = [
 //   {
@@ -252,8 +253,11 @@ async function insertCode(title, dealId) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-const insertCodes = async (codesParam) => {
-  for (const codeItem of codesParam) {
+const insertCodes = async () => {
+  const codes = await formatReddit();
+    console.log("codes", codes);
+
+  for (const codeItem of codes) {
     const { code, appleId, appUrl, dealDescription } = codeItem;
     let app;
     let category;
@@ -309,4 +313,12 @@ const insertCodes = async (codesParam) => {
   }
 };
 
-insertCodes(codes).catch(console.error);
+insertCodes()
+  .then(() => {
+    console.log("Done inserting codes");
+    process.exit(0); // force exit Node.js after all async work done
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
