@@ -71,8 +71,8 @@ AWS.config.update({
 
 const codes = [
   {
-    code: "3SKU73",
-    appleId: "1578068536",
+    code: "3Ssdg3asdg",
+    url: "https://example.com",
   },
 ];
 
@@ -144,9 +144,9 @@ async function insertTopic(title, categoryId) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-async function insertApp({ title, appleId, website, topicId }) {
+async function insertApp({ appTitle, appleId, appUrl, topicId }) {
   const body = {
-    title,
+    title: appTitle,
     topic_id: topicId,
   };
 
@@ -154,9 +154,11 @@ async function insertApp({ title, appleId, website, topicId }) {
     body.apple_id = appleId;
   }
 
-  if (website) {
-    body.website = website;
+  if (appUrl) {
+    body.url = appUrl;
   }
+
+  console.log(body);
 
   const res = await fetch(`${API_PATH}/apps/node`, {
     method: "POST",
@@ -200,13 +202,20 @@ async function insertCode(title, dealId) {
 
 const insertCodes = async (codesParam) => {
   for (const codeItem of codesParam) {
-    const { code, appleId, dealDescription } = codeItem;
+    const { code, appleId, appUrl, dealDescription } = codeItem;
+    let app;
+    let category;
+    let categoryAppleId;
+    let appTitle;
+    let appDescription;
 
-    const app = await fetchAppByAppleId(appleId);
-    const category = app.primaryGenreName;
-    const categoryAppleId = app.primaryGenreId;
-    const appTitle = app.trackName;
-    const appDescription = app.description;
+    if (appleId) {
+      app = await fetchAppByAppleId(appleId);
+     category = app.primaryGenreName;
+      categoryAppleId = app.primaryGenreId;
+      appTitle = app.trackName;
+      appDescription = app.description;
+    }
 
     const newCategory = await insertCategory(category, categoryAppleId);
     const categoryId = newCategory.categoryId;
@@ -223,7 +232,7 @@ const insertCodes = async (codesParam) => {
     const topicId = newTopic.topicId;
     console.log("Inserted topic:", newTopic);
 
-    const newApp = await insertApp(appTitle, appleId, topicId);
+    const newApp = await insertApp({ appTitle, appleId, appUrl, topicId });
     const appId = newApp.appId;
     const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
