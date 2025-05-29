@@ -144,16 +144,29 @@ async function insertTopic(title, categoryId) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-async function insertApp(title, apple_id, topicId) {
+async function insertApp({ title, appleId, website, topicId }) {
+  const body = {
+    title,
+    topic_id: topicId,
+  };
+
+  if (appleId) {
+    body.apple_id = appleId;
+  }
+
+  if (website) {
+    body.website = website;
+  }
+
   const res = await fetch(`${API_PATH}/apps/node`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ title, apple_id, topic_id: topicId }),
+    body: JSON.stringify(body),
   });
-  return await res.json(); // assume it returns { id, full_name }
+  return await res.json();
 }
 
 async function insertDeal(title, description, appleId, appId) {
@@ -185,9 +198,7 @@ async function insertCode(title, dealId) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-
 const insertCodes = async (codesParam) => {
-
   for (const codeItem of codesParam) {
     const { code, appleId, dealDescription } = codeItem;
 
@@ -227,8 +238,6 @@ const insertCodes = async (codesParam) => {
     const codeId = newCode.codeId;
     console.log("Inserted code:", newCode);
   }
-
 };
-
 
 insertCodes(codes).catch(console.error);
