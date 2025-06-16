@@ -295,6 +295,7 @@ const insertCodes = async () => {
     const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
 
+
     const deal = `${newAppTitle} referral codes`;
 
     const newDeal = await insertDeal({

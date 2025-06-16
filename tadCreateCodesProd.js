@@ -8,7 +8,6 @@ const path = require("path");
 require("dotenv").config();
 const { apiURL } = require("./utils/apiURL");
 const TurndownService = require("turndown");
-const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
 
@@ -55,11 +54,6 @@ const openai = new OpenAI({
 const USER_UID = process.env.USER_UID_DEALS_LOCAL;
 const API_PATH = process.env.LOCAL_API_PATH;
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
-});
 
 // const codes = [
 //   {
@@ -76,10 +70,20 @@ AWS.config.update({
 //   },
 // ];
 
+// const codes = [
+//   {
+//     code: "087sfg",
+//     appleId: "098213409",
+//   },
+// ];
+
 const codes = [
   {
-    code: "087sfg",
-    appleId: "098213409",
+    code: "A9AJLKH",
+    codeUrl: "https://www.ubank.com.au/refer-a-friend",
+    appUrl: "https://www.ubank.com.au/mobile-banking-app",
+    dealDescription:
+      "Sign up for a Ubank account using the referral code A9AJLKH to get $30 free after making 5 small card purchases within 30 days.",
   },
 ];
 
@@ -223,6 +227,7 @@ async function insertApp({ appTitle, appleId, appUrl, topicId }) {
 }
 
 async function insertDeal({ deal, dealDescription, appleId, appUrl, appId }) {
+
   const res = await fetch(`${API_PATH}/deals/node`, {
     method: "POST",
     headers: {
@@ -253,7 +258,6 @@ async function insertCode(title, dealId) {
 }
 
 const insertCodes = async (codesParam) => {
-
   for (const codeItem of codesParam) {
     const { code, appleId, appUrl, dealDescription } = codeItem;
     let app;

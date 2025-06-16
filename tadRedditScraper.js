@@ -1,6 +1,7 @@
 const OpenAI = require("openai");
 require("dotenv").config();
 const { writeFile } = require("fs/promises");
+const { jsonrepair } = require("jsonrepair");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
@@ -8,13 +9,14 @@ const openai = new OpenAI({
 
 function cleanOpenAIJsonReply(reply) {
   // Remove ```json or ``` at start and ``` at end, if present
-  return reply
+  const cleaned = reply
     .replace(/^```json\s*/, "") // remove ```json at start
     .replace(/^```\s*/, "") // remove ``` at start (fallback)
     .replace(/```$/, "") // remove ``` at end
     .trim();
-}
 
+  return cleaned;
+}
 
 async function fetchReddit() {
   const url = "https://www.reddit.com/r/referralcodes/top.json?t=month&limit=5";
@@ -65,8 +67,7 @@ Another option, if you can't find related iOS app - then try to find appUrl - wh
     dealDescription: '....'
   },
 ]; NOW THIS IS IMPORTANT: code is required field, if you can't find code in message - skip it. Also, either appleId or appUrl is required. If neither appleId nor appUrl are not available, just skip. Just return array of objects in json. `;
-console.log(prompt);
-
+  console.log(prompt);
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -75,17 +76,18 @@ console.log(prompt);
     max_tokens: 600,
   });
 
- const rawReply = completion.choices[0].message.content.trim();
- const cleanedReply = cleanOpenAIJsonReply(rawReply);
+  const rawReply = completion.choices[0].message.content.trim();
+  const cleanedReply = cleanOpenAIJsonReply(rawReply);
 
- try {
-   const parsed = JSON.parse(cleanedReply);
-   return parsed;
- } catch (error) {
-   console.error("Failed to parse OpenAI reply:", error);
-   console.log("Raw reply was:", rawReply);
-   return [];
- }
+  try {
+    const repairedJson = jsonrepair(cleanedReply);
+    const parsed = JSON.parse(repairedJson);
+    return parsed;
+  } catch (error) {
+    console.error("Failed to parse OpenAI reply:", error);
+    console.log("Raw reply was:", rawReply);
+    return [];
+  }
 }
 
 module.exports = formatReddit;

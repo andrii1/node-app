@@ -56,11 +56,6 @@ const openai = new OpenAI({
 const USER_UID = process.env.USER_UID_DEALS_LOCAL;
 const API_PATH = process.env.LOCAL_API_PATH;
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
-});
 
 // const codes = [
 //   {
@@ -184,11 +179,10 @@ async function insertDeal(title, appleId, appId) {
 //   return await res.json(); // assume it returns { id, full_name }
 // }
 
-
 const insertApps = async (appsParam) => {
-
+  console.log(appsParam);
   for (const appItem of appsParam) {
-    const appleId = appItem.id;
+    const appleId = appItem[0].id;
 
     const app = await fetchAppByAppleId(appleId);
     const category = app.primaryGenreName;
@@ -226,16 +220,49 @@ const insertApps = async (appsParam) => {
     // const codeId = newCode.codeId;
     // console.log("Inserted code:", newCode);
   }
-
 };
-
 
 //insertApps(apps).catch(console.error);
 
-store
-  .list({
+store;
+Promise.all([
+  store.list({
     collection: store.collection.TOP_FREE_IOS,
     num: 2,
-  })
+  }),
+  store.list({
+    collection: store.collection.TOP_GROSSING_IOS,
+    num: 2,
+  }),
+  store.list({
+    collection: store.collection.TOP_PAID_IOS,
+    num: 2,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.ENTERTAINMENT,
+    num: 2,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.FINANCE,
+    num: 2,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.LIFESTYLE,
+    num: 2,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.PHOTO_AND_VIDEO,
+    num: 2,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.SOCIAL_NETWORKING,
+    num: 2,
+  }),
+])
   .then(insertApps)
   .catch(console.log);
