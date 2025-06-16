@@ -139,14 +139,26 @@ async function insertTopic(title, categoryId) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-async function insertApp(title, apple_id, topicId) {
+async function insertApp({ appTitle, appleId, appUrl, topicId }) {
+   const body = {
+     title: appTitle,
+     topic_id: topicId,
+   };
+
+   if (appleId) {
+     body.apple_id = appleId;
+   }
+
+   if (appUrl) {
+     body.url = appUrl;
+   }
   const res = await fetch(`${API_PATH}/apps/node`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ title, apple_id, topic_id: topicId }),
+    body: JSON.stringify(body),
   });
   return await res.json(); // assume it returns { id, full_name }
 }
@@ -189,6 +201,7 @@ const insertApps = async (appsParam) => {
     const categoryAppleId = app.primaryGenreId;
     const appTitle = app.trackName;
     const appDescription = app.description;
+    const appUrl = app.sellerUrl;
 
     const newCategory = await insertCategory(category, categoryAppleId);
     const categoryId = newCategory.categoryId;
@@ -205,7 +218,7 @@ const insertApps = async (appsParam) => {
     const topicId = newTopic.topicId;
     console.log("Inserted topic:", newTopic);
 
-    const newApp = await insertApp(appTitle, appleId, topicId);
+    const newApp = await insertApp({ appTitle, appleId, appUrl, topicId });
     const appId = newApp.appId;
     const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
