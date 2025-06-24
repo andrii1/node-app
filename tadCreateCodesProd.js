@@ -17,7 +17,7 @@ const API_PATH = process.env.API_PATH_DEALS_PROD;
 
 // WITH CODE
 
-// ONLY APPLEID
+// ALL FIELDS
 
 // const codes = [
 //   {
@@ -25,6 +25,18 @@ const API_PATH = process.env.API_PATH_DEALS_PROD;
 //     codeUrl: "https://instawork.com/htYgsgh",
 //     appleId: "6502968192",
 //     appUrl: "https://instawork.com",
+//     dealTitle: "Instawork promo codes",
+//     dealDescription: "Description of the deal",
+//   },
+// ];
+
+// ONLY APPLEID
+
+// const codes = [
+//   {
+//     code: "ieydypd",
+//     codeUrl: "https://instawork.com/htYgsgh",
+//     appleId: "6502968192",
 //     dealTitle: "Instawork promo codes",
 //     dealDescription: "Description of the deal",
 //   },
@@ -51,20 +63,6 @@ const API_PATH = process.env.API_PATH_DEALS_PROD;
 //   },
 // ];
 
-const codes = [
-
-  {
-    code: "WINCASH50",
-    appUrl: 'https://cashwave.com/',
-    dealDescription: "Get $50 to your credit",
-  },
-  {
-    code: "andrii",
-    appleId: "1470077137",
-    codeUrl: "https://flip.shop/invite/andrii",
-    dealDescription: "Give $30 and get $30 for every friend who joins",
-  },
-];
 
 // fetch helpers
 
