@@ -9,11 +9,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
 });
 
-
-
 // Credentials (from .env)
-const USER_UID = process.env.USER_UID_DEALS_LOCAL;
-const API_PATH = process.env.API_PATH_LOCAL;
+const USER_UID = process.env.USER_UID_DEALS_PROD;
+const API_PATH = process.env.API_PATH_DEALS_PROD;
 
 // INSTRUCTION
 
@@ -24,39 +22,47 @@ const API_PATH = process.env.API_PATH_LOCAL;
 // const codes = [
 //   {
 //     code: "ieydypd",
+//     codeUrl: "https://instawork.com/htYgsgh",
 //     appleId: "6502968192",
 //     appUrl: "https://instawork.com",
+//     dealTitle: "Instawork promo codes",
 //     dealDescription: "Description of the deal",
 //   },
 // ];
-
 
 // ONLY APPURL
 // const codes = [
 //   {
 //     code: "0dfgdfg",
+//     codeUrl: "https://instawork.com/htYgsgh",
 //     appUrl: "https://instawork.com",
+//     dealTitle: "Instawork promo codes",
 //     dealDescription: "Description of the deal",
 //   },
 // ];
-
 
 // WITHOUT CODE
 // const codes = [
 //   {
 //     appleId: "6502968192",
 //     appUrl: "https://instawork.com",
+//     dealTitle: "Instawork promo codes",
 //     dealDescription: "Description of the deal",
 //   },
 // ];
 
 const codes = [
+
   {
-    code: "A9AJLKH",
-    codeUrl: "https://www.ubank.com.au/refer-a-friend",
-    appUrl: "https://www.ubank.com.au/mobile-banking-app",
-    dealDescription:
-      "Sign up for a Ubank account using the referral code A9AJLKH to get $30 free after making 5 small card purchases within 30 days.",
+    code: "WINCASH50",
+    appUrl: 'https://cashwave.com/',
+    dealDescription: "Get $50 to your credit",
+  },
+  {
+    code: "andrii",
+    appleId: "1470077137",
+    codeUrl: "https://flip.shop/invite/andrii",
+    dealDescription: "Give $30 and get $30 for every friend who joins",
   },
 ];
 
@@ -217,21 +223,30 @@ async function insertDeal({ deal, dealDescription, appleId, appUrl, appId }) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-async function insertCode(title, dealId) {
+async function insertCode({ code, codeUrl, dealId }) {
+  const body = {
+    title: code,
+    deal_id: dealId,
+  };
+
+  if (codeUrl) {
+    body.url = codeUrl;
+  }
   const res = await fetch(`${API_PATH}/codes/node`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ title, deal_id: dealId }),
+    body: JSON.stringify(body),
   });
   return await res.json(); // assume it returns { id, full_name }
 }
 
 const insertCodes = async (codesParam) => {
   for (const codeItem of codesParam) {
-    const { code, appleId, appUrl, dealDescription } = codeItem;
+    const { code, codeUrl, appleId, appUrl, dealTitle, dealDescription } =
+      codeItem;
     let app;
     let category;
     let categoryAppleId;
@@ -268,7 +283,12 @@ const insertCodes = async (codesParam) => {
     const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
 
-    const deal = `${newAppTitle} referral codes`;
+    let deal;
+    if (dealTitle) {
+      deal = dealTitle;
+    } else {
+      deal = `${newAppTitle} referral codes`;
+    }
 
     const newDeal = await insertDeal({
       deal,
@@ -281,7 +301,7 @@ const insertCodes = async (codesParam) => {
     console.log("Inserted deal:", newDeal);
 
     if (code) {
-      const newCode = await insertCode(code, dealId);
+      const newCode = await insertCode({ code, codeUrl, dealId });
       const codeId = newCode.codeId;
       console.log("Inserted code:", newCode);
     }
