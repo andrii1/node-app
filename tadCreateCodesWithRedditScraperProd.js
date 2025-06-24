@@ -54,7 +54,7 @@ const openai = new OpenAI({
 
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID_DEALS_LOCAL;
-const API_PATH = process.env.LOCAL_API_PATH;
+const API_PATH = process.env.API_PATH_LOCAL;
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,

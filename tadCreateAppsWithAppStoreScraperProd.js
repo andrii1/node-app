@@ -53,8 +53,8 @@ const openai = new OpenAI({
 // });
 
 // Credentials (from .env)
-const USER_UID = process.env.USER_UID_DEALS_LOCAL;
-const API_PATH = process.env.LOCAL_API_PATH;
+const USER_UID = process.env.USER_UID_DEALS_PROD;
+const API_PATH = process.env.API_PATH_DEALS_PROD;
 
 
 // const codes = [
@@ -241,40 +241,70 @@ store;
 Promise.all([
   store.list({
     collection: store.collection.TOP_FREE_IOS,
-    num: 2,
+    num: 50,
   }),
   store.list({
     collection: store.collection.TOP_GROSSING_IOS,
-    num: 2,
+    num: 50,
   }),
   store.list({
     collection: store.collection.TOP_PAID_IOS,
-    num: 2,
+    num: 50,
   }),
   store.list({
     collection: store.collection.TOP_FREE_IOS,
     category: store.category.ENTERTAINMENT,
-    num: 2,
+    num: 50,
   }),
   store.list({
     collection: store.collection.TOP_FREE_IOS,
     category: store.category.FINANCE,
-    num: 2,
+    num: 50,
   }),
   store.list({
     collection: store.collection.TOP_FREE_IOS,
     category: store.category.LIFESTYLE,
-    num: 2,
+    num: 50,
   }),
   store.list({
     collection: store.collection.TOP_FREE_IOS,
     category: store.category.PHOTO_AND_VIDEO,
-    num: 2,
+    num: 50,
   }),
   store.list({
     collection: store.collection.TOP_FREE_IOS,
     category: store.category.SOCIAL_NETWORKING,
-    num: 2,
+    num: 50,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.HEALTH_AND_FITNESS,
+    num: 50,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.MUSIC,
+    num: 50,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.PRODUCTIVITY,
+    num: 50,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.BUSINESS,
+    num: 50,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.TRAVEL,
+    num: 50,
+  }),
+  store.list({
+    collection: store.collection.TOP_FREE_IOS,
+    category: store.category.UTILITIES,
+    num: 50,
   }),
 ])
   .then(insertApps)

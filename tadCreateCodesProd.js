@@ -52,13 +52,13 @@ const openai = new OpenAI({
 
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID_DEALS_LOCAL;
-const API_PATH = process.env.LOCAL_API_PATH;
-
+const API_PATH = process.env.API_PATH_LOCAL;
 
 // const codes = [
 //   {
 //     code: "ieydypd",
 //     appleId: "6502968192",
+//     appUrl: "https://instawork.com",
 //     dealDescription: "Description of the deal",
 //   },
 // ];
@@ -227,7 +227,6 @@ async function insertApp({ appTitle, appleId, appUrl, topicId }) {
 }
 
 async function insertDeal({ deal, dealDescription, appleId, appUrl, appId }) {
-
   const res = await fetch(`${API_PATH}/deals/node`, {
     method: "POST",
     headers: {
@@ -308,9 +307,11 @@ const insertCodes = async (codesParam) => {
     const dealId = newDeal.dealId;
     console.log("Inserted deal:", newDeal);
 
-    const newCode = await insertCode(code, dealId);
-    const codeId = newCode.codeId;
-    console.log("Inserted code:", newCode);
+    if (code) {
+      const newCode = await insertCode(code, dealId);
+      const codeId = newCode.codeId;
+      console.log("Inserted code:", newCode);
+    }
   }
 };
 
