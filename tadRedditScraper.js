@@ -67,7 +67,7 @@ Another option, if you can't find related iOS app - then try to find appUrl - wh
     dealDescription: '....'
   },
 ]; NOW THIS IS IMPORTANT: code is required field, if you can't find code in message - skip it. Also, either appleId or appUrl is required. If neither appleId nor appUrl are not available, just skip. Just return array of objects in json. `;
-  console.log(prompt);
+  //console.log(prompt);
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",

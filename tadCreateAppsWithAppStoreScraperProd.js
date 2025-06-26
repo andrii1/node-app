@@ -1,15 +1,7 @@
-const { createCanvas, registerFont } = require("canvas");
-const { format } = require("date-fns");
-const Papa = require("papaparse");
+
 // const fetch = require("node-fetch");
-const FormData = require("form-data");
-const fs = require("fs");
-const path = require("path");
 require("dotenv").config();
-const { apiURL } = require("./utils/apiURL");
-const TurndownService = require("turndown");
-const AWS = require("aws-sdk");
-const { v4: uuidv4 } = require("uuid");
+
 const OpenAI = require("openai");
 const store = require("app-store-scraper");
 
@@ -237,7 +229,6 @@ const insertApps = async (appsParam) => {
 
 //insertApps(apps).catch(console.error);
 
-store;
 Promise.all([
   store.list({
     collection: store.collection.TOP_FREE_IOS,

@@ -1,15 +1,8 @@
-const { createCanvas, registerFont } = require("canvas");
-const { format } = require("date-fns");
-const Papa = require("papaparse");
+
 // const fetch = require("node-fetch");
-const FormData = require("form-data");
-const fs = require("fs");
-const path = require("path");
+
 require("dotenv").config();
-const { apiURL } = require("./utils/apiURL");
-const TurndownService = require("turndown");
-const AWS = require("aws-sdk");
-const { v4: uuidv4 } = require("uuid");
+
 const OpenAI = require("openai");
 const formatReddit = require("./tadRedditScraper");
 
@@ -17,50 +10,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
 });
 
-// const turndownService = new TurndownService();
-
-// // Rule 1: Preserve <FavoritesBar quoteid="3" /> as JSX
-// turndownService.addRule("favoritesBarComponent", {
-//   filter: function (node) {
-//     return (
-//       node.nodeType === 1 &&
-//       node.tagName === "FAVORITESBAR"
-//     );
-//   },
-//   replacement: function (content, node) {
-//     const quoteId = node.getAttribute("quoteid");
-//     return `<FavoritesBar quoteId={${quoteId}} />`;
-//   },
-// });
-
-// // Rule 2: Preserve divs with their class
-// turndownService.addRule("divWithClass", {
-//   filter: "div",
-//   replacement: function (content, node) {
-//     const className = node.getAttribute("class");
-//     return className
-//       ? `<div class="${className}">${content}</div>\n`
-//       : `<div>${content}</div>\n`;
-//   },
-// });
-
-// // Rule 3: Preserve p tags
-// turndownService.addRule("preserveParagraphs", {
-//   filter: "p",
-//   replacement: function (content) {
-//     return `<p>${content}</p>`;
-//   },
-// });
-
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID_DEALS_LOCAL;
 const API_PATH = process.env.API_PATH_LOCAL;
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
-});
 
 // const codes = [
 //   {
@@ -154,25 +107,6 @@ async function createWebsiteDataWithChatGpt(url) {
   return { category, appTitle, appDescription };
 }
 
-// async function fetchExistingCategories() {
-//   const res = await fetch(`${API_PATH}/categories`);
-//   return res.json();
-// }
-
-// async function fetchExistingTopics() {
-//   const res = await fetch(`${API_PATH}/topics`);
-//   return res.json();
-// }
-
-// async function fetchExistingApps() {
-//   const res = await fetch(`${API_PATH}/apps`);
-//   return res.json();
-// }
-
-// async function fetchExistingDeals() {
-//   const res = await fetch(`${API_PATH}/deals`);
-//   return res.json();
-// }
 
 async function insertCategory(title, categoryAppleId) {
   const res = await fetch(`${API_PATH}/categories`, {
