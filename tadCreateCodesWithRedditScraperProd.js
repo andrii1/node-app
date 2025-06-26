@@ -241,14 +241,22 @@ async function insertDeal({ deal, dealDescription, appleId, appUrl, appId }) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-async function insertCode(title, dealId) {
+async function insertCode({ code, codeUrl, dealId }) {
+  const body = {
+    title: code,
+    deal_id: dealId,
+  };
+
+  if (codeUrl) {
+    body.url = codeUrl;
+  }
   const res = await fetch(`${API_PATH}/codes/node`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ title, deal_id: dealId }),
+    body: JSON.stringify(body),
   });
   return await res.json(); // assume it returns { id, full_name }
 }
@@ -258,7 +266,7 @@ const insertCodes = async () => {
     console.log("codes", codes);
 
   for (const codeItem of codes) {
-    const { code, appleId, appUrl, dealDescription } = codeItem;
+    const { code, codeUrl, appleId, appUrl, dealDescription } = codeItem;
     let app;
     let category;
     let categoryAppleId;
@@ -308,9 +316,11 @@ const insertCodes = async () => {
     const dealId = newDeal.dealId;
     console.log("Inserted deal:", newDeal);
 
-    const newCode = await insertCode(code, dealId);
-    const codeId = newCode.codeId;
-    console.log("Inserted code:", newCode);
+    if (code) {
+      const newCode = await insertCode({ code, codeUrl, dealId });
+      const codeId = newCode.codeId;
+      console.log("Inserted code:", newCode);
+    }
   }
 };
 
