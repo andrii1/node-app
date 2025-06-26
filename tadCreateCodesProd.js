@@ -285,7 +285,9 @@ const insertCodes = async (codesParam) => {
     if (dealTitle) {
       deal = dealTitle;
     } else {
-      deal = `${newAppTitle} referral codes`;
+      const match = newAppTitle.match(/^(.*?)(?:-|:)/);
+      const appName = match ? match[1].trim() : newAppTitle;
+      deal = `${appName} referral codes`;
     }
 
     const newDeal = await insertDeal({

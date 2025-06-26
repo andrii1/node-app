@@ -1,4 +1,3 @@
-
 // const fetch = require("node-fetch");
 
 require("dotenv").config();
@@ -13,7 +12,6 @@ const openai = new OpenAI({
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID_DEALS_LOCAL;
 const API_PATH = process.env.API_PATH_LOCAL;
-
 
 // const codes = [
 //   {
@@ -107,7 +105,6 @@ async function createWebsiteDataWithChatGpt(url) {
   return { category, appTitle, appDescription };
 }
 
-
 async function insertCategory(title, categoryAppleId) {
   const res = await fetch(`${API_PATH}/categories`, {
     method: "POST",
@@ -197,10 +194,11 @@ async function insertCode({ code, codeUrl, dealId }) {
 
 const insertCodes = async () => {
   const codes = await formatReddit();
-    console.log("codes", codes);
+  console.log("codes", codes);
 
   for (const codeItem of codes) {
-    const { code, codeUrl, appleId, appUrl, dealDescription } = codeItem;
+    const { code, codeUrl, appleId, appUrl, dealTitle, dealDescription } =
+      codeItem;
     let app;
     let category;
     let categoryAppleId;
@@ -237,8 +235,14 @@ const insertCodes = async () => {
     const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
 
-
-    const deal = `${newAppTitle} referral codes`;
+    let deal;
+    if (dealTitle) {
+      deal = dealTitle;
+    } else {
+      const match = newAppTitle.match(/^(.*?)(?:-|:)/);
+      const appName = match ? match[1].trim() : newAppTitle;
+      deal = `${appName} referral codes`;
+    }
 
     const newDeal = await insertDeal({
       deal,
