@@ -9,53 +9,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
 });
 
-// const turndownService = new TurndownService();
-
-// // Rule 1: Preserve <FavoritesBar quoteid="3" /> as JSX
-// turndownService.addRule("favoritesBarComponent", {
-//   filter: function (node) {
-//     return (
-//       node.nodeType === 1 &&
-//       node.tagName === "FAVORITESBAR"
-//     );
-//   },
-//   replacement: function (content, node) {
-//     const quoteId = node.getAttribute("quoteid");
-//     return `<FavoritesBar quoteId={${quoteId}} />`;
-//   },
-// });
-
-// // Rule 2: Preserve divs with their class
-// turndownService.addRule("divWithClass", {
-//   filter: "div",
-//   replacement: function (content, node) {
-//     const className = node.getAttribute("class");
-//     return className
-//       ? `<div class="${className}">${content}</div>\n`
-//       : `<div>${content}</div>\n`;
-//   },
-// });
-
-// // Rule 3: Preserve p tags
-// turndownService.addRule("preserveParagraphs", {
-//   filter: "p",
-//   replacement: function (content) {
-//     return `<p>${content}</p>`;
-//   },
-// });
 
 // Credentials (from .env)
 const USER_UID = process.env.USER_UID_DEALS_PROD;
 const API_PATH = process.env.API_PATH_DEALS_PROD;
 
 
-// const codes = [
-//   {
-//     code: "ieydypd",
-//     appleId: "6502968192",
-//     dealDescription: "Description of the deal",
-//   },
-// ];
 
 const apps = [
   {
@@ -171,17 +130,6 @@ async function insertDeal(title, appleId, appId) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-// async function insertCode(title, dealId) {
-//   const res = await fetch(`${API_PATH}/codes/node`, {
-//     method: "POST",
-//     headers: {
-//       token: `token ${USER_UID}`,
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({ title, deal_id: dealId }),
-//   });
-//   return await res.json(); // assume it returns { id, full_name }
-// }
 
 const insertApps = async (appsParam) => {
   console.log(appsParam);
@@ -215,7 +163,11 @@ const insertApps = async (appsParam) => {
     const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
 
-    const deal = `${newAppTitle} referral codes`;
+    // const deal = `${newAppTitle} referral codes`;
+
+    const match = newAppTitle.match(/^(.*?)(?:-|:)/);
+    const appName = match ? match[1].trim() : newAppTitle;
+    const deal = `${appName} referral codes`;
 
     const newDeal = await insertDeal(deal, appleId, appId);
     const dealId = newDeal.dealId;

@@ -1,10 +1,19 @@
 const OpenAI = require("openai");
 require("dotenv").config();
+const snoowrap = require("snoowrap");
 const { writeFile } = require("fs/promises");
 const { jsonrepair } = require("jsonrepair");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
+});
+
+const reddit = new snoowrap({
+  userAgent: process.env.REDDIT_USER_AGENT,
+  clientId: process.env.REDDIT_CLIENT_ID,
+  clientSecret: process.env.REDDIT_CLIENT_SECRET,
+  username: process.env.REDDIT_USERNAME,
+  password: process.env.REDDIT_PASSWORD,
 });
 
 function cleanOpenAIJsonReply(reply) {
@@ -18,37 +27,71 @@ function cleanOpenAIJsonReply(reply) {
   return cleaned;
 }
 
-async function fetchReddit() {
-  const url = "https://www.reddit.com/r/referralcodes/top.json?t=month&limit=5";
-  const headers = {
-    "User-Agent": "node:weeklyReferralScraper:v1.0 (by /u/yourusername)",
-  };
-  const response = await fetch(url, { headers });
+const listOfSubreddits = [
+  "referralcodes",
+  "ReferalLinks",
+  "Referral",
+  "Referrals",
+];
 
-  if (!response.ok) {
-    console.error("Failed to fetch posts:", response.statusText);
-    process.exit(1);
+async function fetchRedditWithApi() {
+  const allPosts = [];
+
+  for (const subredditName of listOfSubreddits) {
+    try {
+      const subreddit = await reddit.getSubreddit(subredditName);
+      const posts = await subreddit.getTop({ time: "week", limit: 10 });
+
+      const postsMap = posts.map((post) => ({
+        title: post.title,
+        url: `https://reddit.com${post.permalink}`,
+        author: post.author.name,
+        selftext: post.selftext,
+        upvotes: post.ups,
+        created_utc: post.created_utc,
+        subreddit: subredditName,
+      }));
+
+      allPosts.push(...postsMap);
+    } catch (err) {
+      console.error(`Failed to fetch from r/${subredditName}:`, err.message);
+    }
   }
-  const data = await response.json();
 
-  const posts = data.data.children.map((post) => ({
-    title: post.data.title,
-    url: `https://reddit.com${post.data.permalink}`,
-    author: post.data.author,
-    selftext: post.data.selftext,
-    upvotes: post.data.ups,
-    created_utc: post.data.created_utc,
-  }));
-  console.log(posts);
-  await writeFile("reddit/referral_posts.json", JSON.stringify(posts, null, 2));
-
-  return posts;
+  return allPosts;
 }
+
+// async function fetchReddit() {
+//   const url = "https://www.reddit.com/r/referralcodes/top.json?t=month&limit=5";
+//   const headers = {
+//     "User-Agent": "node:weeklyReferralScraper:v1.0 (by /u/yourusername)",
+//   };
+//   const response = await fetch(url, { headers });
+
+//   if (!response.ok) {
+//     console.error("Failed to fetch posts:", response.statusText);
+//     process.exit(1);
+//   }
+//   const data = await response.json();
+
+//   const posts = data.data.children.map((post) => ({
+//     title: post.data.title,
+//     url: `https://reddit.com${post.data.permalink}`,
+//     author: post.data.author,
+//     selftext: post.data.selftext,
+//     upvotes: post.data.ups,
+//     created_utc: post.data.created_utc,
+//   }));
+//   console.log(posts);
+//   await writeFile("reddit/referral_posts.json", JSON.stringify(posts, null, 2));
+
+//   return posts;
+// }
 
 async function formatReddit() {
   // Generate a short description using OpenAI
 
-  const posts = await fetchReddit();
+  const posts = await fetchRedditWithApi();
   const prompt = `${JSON.stringify(
     posts
   )} Here are top Reddit posts about referral codes. You need to change to different format. Two options: you can find related appleId or not. If you can find out that this is a referral code for iOS app, then get appleId. To get appleId, you can find link for app in app store. For example, if app is tiktok, then app store link is 'https://apps.apple.com/us/app/tiktok/id835599320' and appleId will be '835599320'. Only include appleId if you are quite sure. For dealDescription field generate related description based on deal and reddit text. If there is also a referral link, use it in codeUrl field, if not - then don't add it. For codeUrl, I don't need reddit link to the post. For codeUrl, I also don't need link to main website. Only include codeUrl, if it is specifically referral link. Use this format: [

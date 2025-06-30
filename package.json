@@ -19,6 +19,7 @@
     "pinterest-node-api": "^0.0.9",
     "promisify": "^0.0.3",
     "request": "^2.88.2",
+    "snoowrap": "^1.23.0",
     "stream": "^0.0.3",
     "turndown": "^7.2.0",
     "uuid": "^11.1.0"
