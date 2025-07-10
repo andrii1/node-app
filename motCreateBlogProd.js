@@ -27,9 +27,9 @@ turndownService.addRule("divWithClass", {
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Credentials (from .env)
-const USER_UID = process.env.USER_UID;
+const USER_UID = process.env.USER_UID_MOT_PROD;
 // const LOCALHOST_API_PATH = process.env.LOCALHOST_API_PATH;
-const PROD_API_PATH = process.env.PROD_API_PATH;
+const PROD_API_PATH = process.env.API_PATH_MOT_PROD;;
 
 const blog = {
   title: "Barney fife quotes",

@@ -50,8 +50,8 @@ const { v4: uuidv4 } = require("uuid");
 registerFont("fonts/norwester/norwester.otf", { family: "Norwester" });
 
 // Credentials (from .env)
-const USER_UID = process.env.USER_UID;
-const API_PATH = process.env.PROD_API_PATH;
+const USER_UID = process.env.USER_UID_MOT_PROD;
+const API_PATH = process.env.API_PATH_MOT_PROD;;
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,

@@ -28,10 +28,7 @@ function cleanOpenAIJsonReply(reply) {
 }
 
 const listOfSubreddits = [
-  "referralcodes",
-  "ReferalLinks",
-  "Referral",
-  "Referrals",
+  "quotes",
 ];
 
 async function fetchRedditWithApi() {
@@ -40,7 +37,7 @@ async function fetchRedditWithApi() {
   for (const subredditName of listOfSubreddits) {
     try {
       const subreddit = await reddit.getSubreddit(subredditName);
-      const posts = await subreddit.getTop({ time: "month", limit: 20 });
+      const posts = await subreddit.getTop({ time: "week", limit: 100 });
 
       const postsMap = posts.map((post) => ({
         title: post.title,
@@ -92,24 +89,19 @@ async function formatReddit() {
   // Generate a short description using OpenAI
 
   const posts = await fetchRedditWithApi();
-  const prompt = `${JSON.stringify(
-    posts
-  )} Here are top Reddit posts about referral codes. You need to change to different format. 'code' field is a referral code from the user.
-Also find appUrl - which is an official website of the app. For dealDescription field generate related description based on deal and reddit text. If there is also a referral link, use it in codeUrl field, if not - then don't add it. For codeUrl, I don't need reddit link to the post. For codeUrl, I also don't need link to main website. Only include codeUrl, if it is specifically referral link. For codeUrl, I also don't need link to main website. Only include codeUrl, if it is specifically referral link. For appUrl, don't include link to reddit. Use this format: [
-  {
-    code: "3SKU73",
-    codeUrl: 'https://example.com/invite/YthS4h',
-    appUrl: 'https://example.com'
-    dealDescription: '....'
-  },
-]; NOW THIS IS IMPORTANT: code is required field, if you can't find code in message - skip it. Also, appUrl is required. If you can't find appUrl, just skip. Just return array of objects in json. Do not include any notes, comments, markdown, or additional explanation — only return a clean JSON array of objects, not wrapped inside any other array. `;
+  const prompt = `${JSON.stringify(posts)} Extract quotes from these Reddit posts and turn them to this format [
+  "Do what you can, with what you have, where you are. - Theodore Roosevelt",
+  "You are never too old to set another goal or to dream a new dream. - C.S. Lewis",
+  "Everything you can imagine is real. - Pablo Picasso",
+  "Happiness depends upon ourselves. - Aristotle",
+  "Start where you are. Use what you have. Do what you can. - Arthur Ashe" ].  Just return array of objects in json. Do not include any notes, comments, markdown, or additional explanation — only return a clean JSON array of objects, not wrapped inside any other array. `;
   // console.log(prompt);
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.7,
-    max_tokens: 600,
+    max_tokens: 3000,
   });
 
   const rawReply = completion.choices[0].message.content.trim();

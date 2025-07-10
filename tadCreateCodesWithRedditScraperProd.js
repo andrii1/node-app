@@ -3,15 +3,15 @@
 require("dotenv").config();
 
 const OpenAI = require("openai");
-const formatReddit = require("./tadRedditScraperApi");
+const formatReddit = require("./tadRedditSearchScraperApi");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // make sure this is set in your .env
 });
 
 // Credentials (from .env)
-const USER_UID = process.env.USER_UID_DEALS_LOCAL;
-const API_PATH = process.env.API_PATH_LOCAL;
+const USER_UID = process.env.USER_UID_DEALS_PROD;
+const API_PATH = process.env.API_PATH_DEALS_PROD;
 
 // const codes = [
 //   {
@@ -105,14 +105,14 @@ async function createWebsiteDataWithChatGpt(url) {
   return { category, appTitle, appDescription };
 }
 
-async function insertCategory(title, categoryAppleId) {
+async function insertCategory(title) {
   const res = await fetch(`${API_PATH}/categories`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ title, category_apple_id: categoryAppleId }),
+    body: JSON.stringify({ title }),
   });
   return await res.json(); // assume it returns { id, full_name }
 }
@@ -155,21 +155,29 @@ async function insertApp({ appTitle, appleId, appUrl, topicId }) {
 }
 
 async function insertDeal({ deal, dealDescription, appleId, appUrl, appId }) {
+  const body = {
+    title: deal,
+    app_id: appId,
+    url: appUrl,
+  };
+
+  if (appleId) {
+    body.apple_id = appleId;
+  }
+
+  if (dealDescription) {
+    body.description = dealDescription;
+  }
   const res = await fetch(`${API_PATH}/deals/node`, {
     method: "POST",
     headers: {
       token: `token ${USER_UID}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      title: deal,
-      description: dealDescription,
-      apple_id: appleId,
-      url: appUrl,
-      app_id: appId,
-    }),
+    body: JSON.stringify(body),
   });
-  return await res.json(); // assume it returns { id, full_name }
+  const data = await res.json();
+  return data; // assume it returns { id, full_name }
 }
 
 async function insertCode({ code, codeUrl, dealId }) {
@@ -197,26 +205,31 @@ const insertCodes = async () => {
   console.log("codes", codes);
 
   for (const codeItem of codes) {
-    const { code, codeUrl, appleId, appUrl, dealTitle, dealDescription } =
-      codeItem;
-    let app;
-    let category;
-    let categoryAppleId;
-    let appTitle;
-    let appDescription;
+    const { code, codeUrl, appUrl, dealTitle, dealDescription } = codeItem;
 
-    if (appleId) {
-      app = await fetchAppByAppleId(appleId);
-      category = app.primaryGenreName;
-      categoryAppleId = app.primaryGenreId;
-      appTitle = app.trackName;
-      appDescription = app.description;
-    } else {
-      ({ category, appTitle, appDescription } =
-        await createWebsiteDataWithChatGpt(appUrl));
+    if (!code || !appUrl) {
+      // Skip this iteration if code is falsy
+      continue;
     }
 
-    const newCategory = await insertCategory(category, categoryAppleId);
+    if (appUrl.includes('example.com')) {
+      continue;
+    }
+
+    // if (appleId) {
+    //   app = await fetchAppByAppleId(appleId);
+    //   category = app.primaryGenreName;
+    //   categoryAppleId = app.primaryGenreId;
+    //   appTitle = app.trackName;
+    //   appDescription = app.description;
+    // } else {
+
+    // }
+
+    const { category, appTitle, appDescription } =
+      await createWebsiteDataWithChatGpt(appUrl);
+
+    const newCategory = await insertCategory(category);
     const categoryId = newCategory.categoryId;
     console.log("Inserted category:", newCategory);
 
@@ -230,7 +243,7 @@ const insertCodes = async () => {
     const topicId = newTopic.topicId;
     console.log("Inserted topic:", newTopic);
 
-    const newApp = await insertApp({ appTitle, appleId, appUrl, topicId });
+    const newApp = await insertApp({ appTitle, appUrl, topicId });
     const appId = newApp.appId;
     const newAppTitle = newApp.appTitle;
     console.log("Inserted app:", newApp);
@@ -247,7 +260,6 @@ const insertCodes = async () => {
     const newDeal = await insertDeal({
       deal,
       dealDescription,
-      appleId,
       appUrl,
       appId,
     });

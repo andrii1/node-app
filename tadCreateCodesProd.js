@@ -19,6 +19,22 @@ const API_PATH = process.env.API_PATH_DEALS_PROD;
 
 // ALL FIELDS
 
+const codes = [
+  {
+    code: "whitney87160",
+    codeUrl: "https://arcadia.com/referral?promo=whitney87160",
+    appUrl: "https://arcadia.com",
+    dealTitle: "Arcadia invite codes",
+  },
+  {
+    code: "mattho14773",
+    codeUrl:
+      "https://www.arcadia.com/community-solar/referral?promo=mattho14773",
+    appUrl: "https://arcadia.com",
+    dealTitle: "Arcadia invite codes",
+  },
+];
+
 // const codes = [
 //   {
 //     code: "ieydypd",
@@ -27,6 +43,7 @@ const API_PATH = process.env.API_PATH_DEALS_PROD;
 //     appUrl: "https://instawork.com",
 //     dealTitle: "Instawork promo codes",
 //     dealDescription: "Description of the deal",
+//     dealId: '193'
 //   },
 // ];
 
@@ -221,15 +238,16 @@ async function insertDeal({ deal, dealDescription, appleId, appUrl, appId }) {
   return await res.json(); // assume it returns { id, full_name }
 }
 
-async function insertCode({ code, codeUrl, dealId }) {
+async function insertCode({ code, codeUrl, dealIdForCode }) {
   const body = {
     title: code,
-    deal_id: dealId,
+    deal_id: dealIdForCode,
   };
 
   if (codeUrl) {
     body.url = codeUrl;
   }
+
   const res = await fetch(`${API_PATH}/codes/node`, {
     method: "POST",
     headers: {
@@ -243,13 +261,22 @@ async function insertCode({ code, codeUrl, dealId }) {
 
 const insertCodes = async (codesParam) => {
   for (const codeItem of codesParam) {
-    const { code, codeUrl, appleId, appUrl, dealTitle, dealDescription } =
+    const { code, codeUrl, appleId, appUrl, dealTitle, dealDescription, dealId } =
       codeItem;
     let app;
     let category;
     let categoryAppleId;
     let appTitle;
     let appDescription;
+    let dealIdForCode;
+
+    if (dealId) {
+      dealIdForCode = dealId;
+      const newCode = await insertCode({ code, codeUrl, dealIdForCode });
+      const codeId = newCode.codeId;
+      console.log("Inserted code:", newCode);
+      continue;
+    }
 
     if (appleId) {
       app = await fetchAppByAppleId(appleId);
@@ -297,11 +324,11 @@ const insertCodes = async (codesParam) => {
       appUrl,
       appId,
     });
-    const dealId = newDeal.dealId;
+    dealIdForCode = newDeal.dealId;
     console.log("Inserted deal:", newDeal);
 
     if (code) {
-      const newCode = await insertCode({ code, codeUrl, dealId });
+      const newCode = await insertCode({ code, codeUrl, dealIdForCode });
       const codeId = newCode.codeId;
       console.log("Inserted code:", newCode);
     }
